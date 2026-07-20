@@ -2,7 +2,8 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from services.parser import extract_text_from_pdf
 from services.cleaner import clean_extracted_text
-from services.scorer import calculate_match_score # <-- 1. Import the scorer
+from services.scorer import calculate_match_score
+from services.extractor import get_key_skills # <-- 1. Import the new service
 
 app = FastAPI()
 
@@ -22,13 +23,16 @@ async def analyze_resume(
     cleaned_resume = clean_extracted_text(raw_text)
     cleaned_jd = clean_extracted_text(jobDescription)
     
-    # 2. Calculate the dynamic AI score
+    # Calculate Scores and Skills
     match_score = calculate_match_score(cleaned_resume, cleaned_jd)
+    skills_data = get_key_skills(cleaned_resume, cleaned_jd) # <-- 2. Run the extraction
     
-    # 3. Return the dynamic score to React!
+    # 3. Return everything to React
     return {
         "status": "success",
-        "score": match_score, # <-- Replaced the hardcoded 85
+        "score": match_score,
+        "matched_skills": skills_data["matched"],
+        "missing_skills": skills_data["missing"],
         "message": "AI analysis complete!",
         "extracted_text": cleaned_resume 
     }

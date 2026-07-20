@@ -68,19 +68,50 @@ function App() {
         </form>
 
         {/* Results Card */}
-       {result && (
-          <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg animate-pulse">
-            <h2 className="text-xl font-bold text-green-800 mb-2">Pipeline Connected!</h2>
-            <p className="text-green-700">Status: <span className="font-semibold">{result.status}</span></p>
-            <p className="text-green-700 text-2xl mt-2">Score: <span className="font-bold">{result.score}%</span></p>
-            
-            {/* New section to display extracted text */}
-            {result.extracted_text && (
-                <div className="mt-4 p-4 bg-white border border-green-300 rounded text-sm text-gray-700 overflow-hidden">
-                    <p className="font-semibold text-green-800 mb-1">Extracted Resume Text Preview:</p>
-                    <p className="italic">"{result.extracted_text}"</p>
+       {/* Results Card */}
+        {result && (
+          <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Analysis Results</h2>
+                <div className="text-right">
+                    <p className="text-sm text-gray-500 uppercase tracking-wide">Match Score</p>
+                    <p className={`text-4xl font-extrabold ${result.score > 70 ? 'text-green-600' : result.score > 40 ? 'text-yellow-500' : 'text-red-500'}`}>
+                        {result.score}%
+                    </p>
                 </div>
-            )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Matched Skills */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                    <h3 className="font-semibold text-green-800 mb-3 flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                        Matched Keywords
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {result.matched_skills?.length > 0 ? result.matched_skills.map((skill, i) => (
+                            <span key={i} className="px-3 py-1 bg-green-200 text-green-800 rounded-full text-sm font-medium">
+                                {skill}
+                            </span>
+                        )) : <span className="text-sm text-green-600">No major matches found.</span>}
+                    </div>
+                </div>
+
+                {/* Missing Skills */}
+                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                    <h3 className="font-semibold text-red-800 mb-3 flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path></svg>
+                        Missing Keywords
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {result.missing_skills?.length > 0 ? result.missing_skills.map((skill, i) => (
+                            <span key={i} className="px-3 py-1 bg-red-200 text-red-800 rounded-full text-sm font-medium">
+                                {skill}
+                            </span>
+                        )) : <span className="text-sm text-red-600">You hit all the keywords!</span>}
+                    </div>
+                </div>
+            </div>
           </div>
         )}
       </div>
