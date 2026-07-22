@@ -1,30 +1,61 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+def calculate_total_ats_score(analysis_data: dict) -> int:
+    """Calculates score using the formula:
+       Total ATS Score = (S_semantic * 0.45) + (E_metrics * 0.30) + (C_structure * 0.15) + (F_formatting * 0.10)
+    """
+    if not analysis_data:
+        return 0
 
-def calculate_match_score(resume_text: str, job_description: str) -> int:
-    """Calculates the cosine similarity between the resume and job description."""
-    if not resume_text or not job_description:
-        return 0
+    # --- 1. Semantic Score (45% weight) ---
+    skills = analysis_data.get("skills", {})
+    matched = skills.get("matched", [])
+    missing = skills.get("missing", [])
+    total_required = len(matched) + len(missing)
     
-    # Create a list of the two documents to compare
-    documents = [resume_text, job_description]
+    if total_required == 0:
+        s_semantic = 0.0
+    else:
+        s_semantic = (len(matched) / total_required) * 100.0
+
+    # --- 2. Metrics / Impact Score (30% weight) ---
+    # Real-world resumes ideally aim for 4 to 6 strong metrics/quantified data points.
+    metrics_count = analysis_data.get("metrics_count", 0)
+    e_metrics = min((metrics_count / 5.0) * 100.0, 100.0)
+
+    # --- 3. Structure Score (15% weight) ---
+    structure = analysis_data.get("structure", {})
+    word_count = structure.get("word_count", 0)
     
-    # Initialize the Vectorizer (this automatically removes standard English stop-words like 'the', 'is', 'at')
-    vectorizer = TfidfVectorizer(stop_words='english')
+    # Goldilocks Zone for word count: 400 to 900 words gets full points
+    if 400 <= word_count <= 900:
+        word_score = 100.0
+    elif word_count < 400:
+        word_score = max((word_count / 400.0) * 100.0, 20.0)
+    else:
+        word_score = max(100.0 - ((word_count - 900) / 10.0), 40.0)
+        
+    sections_found = sum([
+        structure.get("has_education", False),
+        structure.get("has_experience", False),
+        structure.get("has_skills", False)
+    ])
+    section_score = (sections_found / 3.0) * 100.0
     
-    try:
-        # Convert the text into a mathematical matrix of token counts
-        tfidf_matrix = vectorizer.fit_transform(documents)
-        
-        # Calculate the cosine similarity between document 0 (resume) and document 1 (job description)
-        similarity_matrix = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])
-        
-        # Extract the raw float value (e.g., 0.8532) and convert it to a percentage out of 100
-        raw_score = similarity_matrix[0][0]
-        final_score = int(round(raw_score * 100))
-        
-        return final_score
-        
-    except Exception as e:
-        print(f"Error calculating score: {e}")
-        return 0
+    c_structure = (word_score * 0.5) + (section_score * 0.5)
+
+    # --- 4. Formatting & Contact Score (10% weight) ---
+    formatting = analysis_data.get("formatting", {})
+    has_email = 1.0 if formatting.get("has_email") else 0.0
+    has_phone = 1.0 if formatting.get("has_phone") else 0.0
+    has_linkedin = 1.0 if formatting.get("has_linkedin") else 0.0
+    
+    f_formatting = ((has_email + has_phone + has_linkedin) / 3.0) * 100.0
+
+    # --- Final Weighted Aggregation Equation ---
+    total_ats_score = (
+        (s_semantic * 0.45) + 
+        (e_metrics * 0.30) + 
+        (c_structure * 0.15) + 
+        (f_formatting * 0.10)
+    )
+
+    return int(round(total_ats_score))
