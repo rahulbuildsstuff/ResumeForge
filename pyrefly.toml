@@ -1,0 +1,4 @@
+site-package-path = [
+    "venv/Lib/site-packages",
+    "backend-python/venv/Lib/site-packages"
+]

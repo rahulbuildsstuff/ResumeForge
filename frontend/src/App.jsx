@@ -24,12 +24,9 @@ const ResumeAnalyzer = () => {
     setFile(e.target.files[0]);
   };
 
-  // Main Analysis Request
   const handleAnalyze = async (e) => {
     e.preventDefault();
-    if (!file || !jobDescription) {
-      return alert("Please provide both a PDF resume and a Job Description.");
-    }
+    if (!file || !jobDescription) return alert("Please provide both a PDF resume and a Job Description.");
 
     setLoading(true);
     const formData = new FormData();
@@ -58,239 +55,245 @@ const ResumeAnalyzer = () => {
         alert(data.detail || "Error analyzing resume.");
       }
     } catch (error) {
-      alert("Error connecting to the backend server. Verify that FastAPI is running on port 8000.");
+      alert("Error connecting to the backend server.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Groq AI 1-Click Fix Request
   const handleRewrite = async (bulletText, index) => {
     setLoadingIndex(index);
-
     try {
       const response = await fetch("http://localhost:8000/internal/v1/rewrite-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bullet: bulletText }),
       });
-
       const data = await response.json();
       if (response.ok) {
         setRewrittenBullets(prev => ({ ...prev, [index]: data.rewritten_bullet }));
-      } else {
-        alert(data.detail || "AI rewriting failed.");
       }
     } catch (error) {
-      alert("Error connecting to the Groq AI rewriter endpoint.");
+      alert("Error connecting to the AI rewriter.");
     } finally {
       setLoadingIndex(null);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 font-sans text-gray-800">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       
-      {/* INPUT FORM SECTION */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-8">
-        <h1 className="text-2xl font-bold mb-4">Resume ATS Scanner</h1>
-        <form onSubmit={handleAnalyze} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Upload Resume (PDF)</label>
-            <input 
-              type="file" 
-              accept="application/pdf"
-              onChange={handleFileChange}
-              className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
+      {/* TOP NAVIGATION */}
+      <nav className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-8">
+          <h1 className="text-xl font-black text-blue-600 tracking-tight">ResumeForge AI</h1>
+          <div className="hidden md:flex space-x-6 text-sm font-medium text-gray-600">
+            <span className="text-blue-600 border-b-2 border-blue-600 pb-1">Dashboard</span>
+            <span className="hover:text-blue-600 cursor-pointer">My Resumes</span>
+            <span className="hover:text-blue-600 cursor-pointer">Job Tracker</span>
+            <span className="hover:text-blue-600 cursor-pointer">Templates</span>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Job Description</label>
-            <textarea 
-              rows="4"
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="Paste the job description here..."
-            />
-          </div>
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="bg-blue-600 text-white font-semibold px-5 py-2.5 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
-          >
-            {loading ? "Analyzing..." : "Analyze Resume"}
+        </div>
+        <div>
+          <button className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-md hover:bg-blue-700 transition">
+            ⚡ Upgrade Pro
           </button>
-        </form>
-      </div>
+        </div>
+      </nav>
 
-      {/* DASHBOARD RESULTS SECTION */}
-      {score !== null && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
-          
-          <div className="flex items-center justify-between mb-8 border-b pb-6">
+      <div className="max-w-6xl mx-auto p-6 mt-6">
+        
+        {/* INPUT FORM */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+          <h2 className="text-lg font-bold mb-6 flex items-center">
+            <span className="mr-2 text-blue-500">✨</span> Start New Analysis
+          </h2>
+          <form onSubmit={handleAnalyze} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-blue-400 transition bg-gray-50">
+              <input type="file" accept="application/pdf" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"/>
+            </div>
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">Analysis Complete</h2>
-              <p className="text-gray-500 mt-1">Based on industry-standard ATS parameters</p>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Target Job Description</label>
+              <textarea 
+                rows="6"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                placeholder="Paste the job description here..."
+              />
             </div>
-            <div className={`text-4xl font-black rounded-full h-24 w-24 flex items-center justify-center text-white ${score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}>
-              {score}%
+            <div className="md:col-span-2 flex justify-center mt-2">
+              <button type="submit" disabled={loading} className="bg-blue-500 text-white font-bold px-8 py-3 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 transition w-full md:w-auto shadow-md">
+                {loading ? "Analyzing Document..." : "Analyze Resume"}
+              </button>
             </div>
-          </div>
+          </form>
+        </div>
 
-          {suggestions.length > 0 && (
-            <div className="bg-red-50 p-6 rounded-xl border border-red-200 mb-8">
-              <div className="flex items-center mb-4">
-                <svg className="w-6 h-6 text-red-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                <h3 className="text-xl font-bold text-red-900">High-Priority Action Items</h3>
-              </div>
-              <ul className="list-disc pl-6 space-y-2 text-red-800 font-medium text-sm">
-                {suggestions.map((suggestion, index) => (
-                  <li key={index}>{suggestion}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* DASHBOARD RESULTS */}
+        {score !== null && (
+          <div className="space-y-6">
             
-            {/* LEFT COLUMN */}
-            <div className="space-y-6">
-              
-              <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
-                <h3 className="text-lg font-bold text-blue-900 mb-3">1. Technical Match (45%)</h3>
-                <div className="mb-3">
-                  <span className="font-semibold text-green-700">Matched ({matchedSkills.length}): </span>
-                  <span className="text-sm text-gray-700">{matchedSkills.join(", ") || "None"}</span>
+            {/* MASTER SCORE & ACTION PLAN */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center space-x-6">
+                <div className={`text-4xl font-black rounded-full h-32 w-32 flex items-center justify-center border-8 ${score >= 75 ? 'border-green-500 text-green-600' : score >= 50 ? 'border-yellow-500 text-yellow-600' : 'border-red-500 text-red-600'}`}>
+                  {score}%
                 </div>
                 <div>
-                  <span className="font-semibold text-red-700">Missing ({missingSkills.length}): </span>
-                  <span className="text-sm text-gray-700">{missingSkills.join(", ") || "None"}</span>
+                  <h2 className="text-2xl font-bold text-gray-900">Analysis Complete</h2>
+                  <p className="text-gray-500 mt-1 max-w-sm text-sm leading-relaxed">Your resume has been processed. Review the detailed parameter breakdowns below to optimize your score.</p>
+                </div>
+              </div>
+              
+              {/* DYNAMIC SUGGESTIONS BOX */}
+              {suggestions.length > 0 && (
+                <div className="bg-red-50 p-5 rounded-xl border border-red-100 flex-1 w-full">
+                  <h3 className="text-sm font-bold text-red-800 uppercase tracking-widest mb-3 flex items-center">
+                    <span className="mr-2">⚠️</span> High-Priority Action Items
+                  </h3>
+                  <ul className="list-disc pl-5 space-y-2 text-red-700 text-sm font-medium">
+                    {suggestions.map((suggestion, index) => (
+                      <li key={index}>{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* 4-PILLAR GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* CARD 1: Technical Match */}
+              <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                <h3 className="text-lg font-bold text-blue-900 mb-4">1. Technical Match (45%)</h3>
+                <div className="mb-4">
+                  <span className="font-bold text-green-700">Matched ({matchedSkills.length}): </span>
+                  <span className="text-sm text-gray-700 leading-relaxed">{matchedSkills.join(", ") || "None"}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-red-700">Missing ({missingSkills.length}): </span>
+                  <span className="text-sm text-gray-700 leading-relaxed">{missingSkills.join(", ") || "None"}</span>
                 </div>
               </div>
 
-              <div className="bg-purple-50 p-5 rounded-lg border border-purple-100">
+              {/* CARD 2: Proof of Impact */}
+              <div className="bg-purple-50 p-6 rounded-xl border border-purple-100">
                 <h3 className="text-lg font-bold text-purple-900 mb-2">2. Proof of Impact (30%)</h3>
-                <p className="text-sm text-gray-700 mb-2">Recruiters look for numbers, %, and $ to prove your impact.</p>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-xl font-bold ${metricsCount >= 5 ? 'text-green-600' : 'text-red-500'}`}>
+                <p className="text-sm text-gray-600 mb-4">Recruiters look for numbers, %, and $ to prove your impact.</p>
+                <div className="flex items-baseline space-x-2">
+                  <span className={`text-2xl font-black ${metricsCount >= 5 ? 'text-green-600' : 'text-red-600'}`}>
                     {metricsCount} Metrics Found
                   </span>
                   <span className="text-sm text-gray-500">(Target: 5+)</span>
                 </div>
               </div>
 
-              {/* ✨ SMART AI BULLET FIXER WIDGET */}
-              {weakBullets.length > 0 && (
-                <div className="bg-linear-to-r from-gray-900 to-gray-800 p-5 rounded-lg border border-gray-700 shadow-inner">
-                  <div className="flex items-center mb-2">
-                    <span className="text-xl mr-2">✨</span>
-                    <h3 className="text-lg font-bold text-white">Smart Bullet Fixer</h3>
-                  </div>
-                  <p className="text-xs text-gray-300 mb-4">We automatically scanned your resume and found {weakBullets.length} sentences lacking metrics:</p>
-                  
-                  <div className="space-y-4">
-                    {weakBullets.map((bullet, index) => (
-                      <div key={index} className="bg-gray-800 border border-gray-600 rounded p-4 shadow-sm">
-                        <p className="text-sm text-gray-200 mb-3 italic">"{bullet}"</p>
-                        
-                        {!rewrittenBullets[index] ? (
-                          <button 
-                            onClick={() => handleRewrite(bullet, index)}
-                            disabled={loadingIndex !== null}
-                            className="bg-blue-600 text-white font-semibold py-1.5 px-4 rounded hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 transition-colors text-xs"
-                          >
-                            {loadingIndex === index ? "Generating Magic..." : "Fix with AI"}
-                          </button>
-                        ) : (
-                          <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
-                            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">AI Suggestion:</p>
-                            <p className="text-sm text-gray-900 font-medium leading-relaxed">{rewrittenBullets[index]}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* RIGHT COLUMN */}
-            <div className="space-y-6">
-              
-              <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">3. ATS Structure (15%)</h3>
-                <ul className="space-y-2 text-sm">
+              {/* CARD 3: ATS Structure */}
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">3. ATS Structure (15%)</h3>
+                <ul className="space-y-3 text-sm">
                   <li className="flex justify-between border-b border-gray-200 pb-2">
-                    <span>Word Count (Target 400-900):</span>
-                    <span className={`font-bold ${structure?.word_count >= 400 && structure?.word_count <= 900 ? 'text-green-600' : 'text-red-500'}`}>{structure?.word_count || 0} words</span>
+                    <span className="text-gray-700">Word Count (Target 400-900):</span>
+                    <span className={`font-bold ${structure?.word_count >= 400 && structure?.word_count <= 900 ? 'text-green-600' : 'text-red-600'}`}>
+                      {structure?.word_count || 0} words
+                    </span>
                   </li>
                   <li className="flex justify-between border-b border-gray-200 py-2">
-                    <span>"Education" Section:</span>
-                    <span>{structure?.has_education ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">"Education" Section:</span>
+                    <span className={structure?.has_education ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{structure?.has_education ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between border-b border-gray-200 py-2">
-                    <span>"Experience" Section:</span>
-                    <span>{structure?.has_experience ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">"Experience" Section:</span>
+                    <span className={structure?.has_experience ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{structure?.has_experience ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between border-b border-gray-200 py-2">
-                    <span>"Skills" Section:</span>
-                    <span>{structure?.has_skills ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">"Skills" Section:</span>
+                    <span className={structure?.has_skills ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{structure?.has_skills ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between pt-2">
-                    <div className="flex flex-col">
-                      <span>"Projects" Section:</span>
-                      {!structure?.has_projects && (
-                        <span className="text-xs text-red-500 mt-1 font-semibold">⚠️ Essential for tech roles. Add this section!</span>
-                      )}
-                    </div>
-                    <span>{structure?.has_projects ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">"Projects" Section:</span>
+                    <span className={structure?.has_projects ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{structure?.has_projects ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">4. Contact & Links (10%)</h3>
-                <ul className="space-y-2 text-sm">
+              {/* CARD 4: Contact & Links */}
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">4. Contact & Links (10%)</h3>
+                <ul className="space-y-3 text-sm">
                   <li className="flex justify-between border-b border-gray-200 pb-2">
-                    <span>Email Address:</span>
-                    <span>{formatting?.has_email ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">Email Address:</span>
+                    <span className={formatting?.has_email ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatting?.has_email ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between border-b border-gray-200 py-2">
-                    <span>Phone Number:</span>
-                    <span>{formatting?.has_phone ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">Phone Number:</span>
+                    <span className={formatting?.has_phone ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatting?.has_phone ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between border-b border-gray-200 py-2">
-                    <span>LinkedIn Profile:</span>
-                    <span>{formatting?.has_linkedin ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">LinkedIn Profile:</span>
+                    <span className={formatting?.has_linkedin ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatting?.has_linkedin ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between border-b border-gray-200 py-2">
-                    <span>GitHub Profile:</span>
-                    <span>{formatting?.has_github ? '✅ Found' : '❌ Missing'}</span>
+                    <span className="text-gray-700">GitHub Profile:</span>
+                    <span className={formatting?.has_github ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatting?.has_github ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                   <li className="flex justify-between pt-2">
                     <div className="flex flex-col">
-                      <span>Project Repo Links:</span>
+                      <span className="text-gray-700">Project Repo Links:</span>
                       {structure?.has_projects && formatting?.repo_link_count === 0 && (
-                        <span className="text-xs text-red-500 mt-1 font-semibold">⚠️ Projects found, but 0 repo links detected!</span>
-                      )}
-                      {structure?.has_projects && formatting?.repo_link_count > 0 && formatting?.repo_link_count < 2 && (
-                        <span className="text-xs text-red-500 mt-1 font-semibold">⚠️ Ensure every project has a code link.</span>
+                        <span className="text-xs text-amber-600 mt-1 font-bold">⚠️ Ensure every project has a code link.</span>
                       )}
                     </div>
-                    <span className={`font-bold ${formatting?.repo_link_count >= 2 ? 'text-green-600' : 'text-red-500'}`}>
-                      {formatting?.repo_link_count > 0 ? `${formatting?.repo_link_count} Found` : '❌ Missing'}
+                    <span className={`font-bold ${formatting?.repo_link_count >= 2 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatting?.repo_link_count} Found
                     </span>
                   </li>
                 </ul>
               </div>
 
             </div>
+
+            {/* SMART BULLET FIXER */}
+            {weakBullets.length > 0 && (
+              <div className="bg-slate-900 p-8 rounded-xl border border-slate-800 shadow-xl mt-8">
+                <div className="flex items-center mb-2">
+                  <span className="text-2xl mr-3">✨</span>
+                  <h3 className="text-xl font-bold text-white">Smart Bullet Fixer</h3>
+                </div>
+                <p className="text-sm text-slate-400 mb-6">We automatically scanned your resume and found {weakBullets.length} sentences lacking metrics:</p>
+                
+                <div className="space-y-4">
+                  {weakBullets.map((bullet, index) => (
+                    <div key={index} className="bg-slate-800 border border-slate-700 rounded-lg p-5">
+                      <p className="text-sm text-slate-300 mb-4 italic leading-relaxed">"{bullet}"</p>
+                      
+                      {!rewrittenBullets[index] ? (
+                        <button 
+                          onClick={() => handleRewrite(bullet, index)}
+                          disabled={loadingIndex !== null}
+                          className="bg-blue-600 text-white font-semibold py-2 px-6 rounded hover:bg-blue-500 disabled:bg-slate-600 transition text-sm shadow-md"
+                        >
+                          {loadingIndex === index ? "Generating Magic..." : "Fix with AI"}
+                        </button>
+                      ) : (
+                        <div className="mt-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                          <div className="flex items-center mb-2">
+                            <span className="bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded">✓ Applied</span>
+                            <span className="text-xs text-emerald-800 ml-3 font-semibold">AI Suggestion</span>
+                          </div>
+                          <p className="text-sm text-gray-900 font-medium leading-relaxed">{rewrittenBullets[index]}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
