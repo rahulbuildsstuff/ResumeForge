@@ -17,8 +17,8 @@ const ResumeAnalyzer = () => {
 
   // Smart AI Bullet Fixer State
   const [weakBullets, setWeakBullets] = useState([]);
-  const [rewrittenBullets, setRewrittenBullets] = useState({}); // Stores rewrites by index
-  const [loadingIndex, setLoadingIndex] = useState(null); // Tracks which button is currently loading
+  const [rewrittenBullets, setRewrittenBullets] = useState({});
+  const [loadingIndex, setLoadingIndex] = useState(null); 
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -53,7 +53,7 @@ const ResumeAnalyzer = () => {
         setStructure(data.structure_check || {});
         setFormatting(data.formatting_check || {});
         setWeakBullets(data.weak_bullets || []);
-        setRewrittenBullets({}); // Clear out old AI rewrites on a fresh scan
+        setRewrittenBullets({});
       } else {
         alert(data.detail || "Error analyzing resume.");
       }
@@ -64,7 +64,7 @@ const ResumeAnalyzer = () => {
     }
   };
 
-  // Groq AI 1-Click Fix Request for Specific Weak Bullets
+  // Groq AI 1-Click Fix Request
   const handleRewrite = async (bulletText, index) => {
     setLoadingIndex(index);
 
@@ -128,7 +128,6 @@ const ResumeAnalyzer = () => {
       {score !== null && (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
           
-          {/* Header Score Display */}
           <div className="flex items-center justify-between mb-8 border-b pb-6">
             <div>
               <h2 className="text-3xl font-bold text-gray-900">Analysis Complete</h2>
@@ -139,7 +138,6 @@ const ResumeAnalyzer = () => {
             </div>
           </div>
 
-          {/* HIGH-PRIORITY ACTION ITEMS / SUGGESTIONS BOX */}
           {suggestions.length > 0 && (
             <div className="bg-red-50 p-6 rounded-xl border border-red-200 mb-8">
               <div className="flex items-center mb-4">
@@ -158,10 +156,9 @@ const ResumeAnalyzer = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            {/* LEFT COLUMN: Skills, Metrics, and Smart Bullet Fixer */}
+            {/* LEFT COLUMN */}
             <div className="space-y-6">
               
-              {/* 1. Technical Match */}
               <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
                 <h3 className="text-lg font-bold text-blue-900 mb-3">1. Technical Match (45%)</h3>
                 <div className="mb-3">
@@ -174,7 +171,6 @@ const ResumeAnalyzer = () => {
                 </div>
               </div>
 
-              {/* 2. Proof of Impact */}
               <div className="bg-purple-50 p-5 rounded-lg border border-purple-100">
                 <h3 className="text-lg font-bold text-purple-900 mb-2">2. Proof of Impact (30%)</h3>
                 <p className="text-sm text-gray-700 mb-2">Recruiters look for numbers, %, and $ to prove your impact.</p>
@@ -198,10 +194,8 @@ const ResumeAnalyzer = () => {
                   <div className="space-y-4">
                     {weakBullets.map((bullet, index) => (
                       <div key={index} className="bg-gray-800 border border-gray-600 rounded p-4 shadow-sm">
-                        {/* Original Weak Bullet Sentence */}
                         <p className="text-sm text-gray-200 mb-3 italic">"{bullet}"</p>
                         
-                        {/* 1-Click Fix Button or Result */}
                         {!rewrittenBullets[index] ? (
                           <button 
                             onClick={() => handleRewrite(bullet, index)}
@@ -221,13 +215,11 @@ const ResumeAnalyzer = () => {
                   </div>
                 </div>
               )}
-
             </div>
 
-            {/* RIGHT COLUMN: Structure & Formatting Checklist */}
+            {/* RIGHT COLUMN */}
             <div className="space-y-6">
               
-              {/* 3. Structure Check */}
               <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 mb-3">3. ATS Structure (15%)</h3>
                 <ul className="space-y-2 text-sm">
@@ -247,8 +239,6 @@ const ResumeAnalyzer = () => {
                     <span>"Skills" Section:</span>
                     <span>{structure?.has_skills ? '✅ Found' : '❌ Missing'}</span>
                   </li>
-                  
-                  {/* Projects Section Check */}
                   <li className="flex justify-between pt-2">
                     <div className="flex flex-col">
                       <span>"Projects" Section:</span>
@@ -261,7 +251,6 @@ const ResumeAnalyzer = () => {
                 </ul>
               </div>
 
-              {/* 4. Formatting & Contact Check */}
               <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 mb-3">4. Contact & Links (10%)</h3>
                 <ul className="space-y-2 text-sm">
@@ -281,8 +270,6 @@ const ResumeAnalyzer = () => {
                     <span>GitHub Profile:</span>
                     <span>{formatting?.has_github ? '✅ Found' : '❌ Missing'}</span>
                   </li>
-                  
-                  {/* Repo Links Counter */}
                   <li className="flex justify-between pt-2">
                     <div className="flex flex-col">
                       <span>Project Repo Links:</span>

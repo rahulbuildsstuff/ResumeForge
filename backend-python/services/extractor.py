@@ -3,7 +3,11 @@ from sentence_transformers import SentenceTransformer, util
 import re
 
 print("Loading local AI models... (This might take a few seconds)")
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except Exception:
+    nlp = None
+    
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 TECH_ANCHOR = "programming language, web framework, database schema, api endpoint, cloud infrastructure, machine learning algorithm, deployment pipeline"
@@ -39,6 +43,26 @@ def analyze_metrics(resume_text: str) -> int:
     metrics_patterns = re.findall(r'(\d+[%$xX]|\d+\+|\$[\d,]+)', resume_text)
     return len(metrics_patterns)
 
+def find_weak_bullets(resume_text: str) -> list:
+    """Automatically hunts down sentences in the resume that lack performance metrics."""
+    sentences = re.split(r'\n|\. ', resume_text)
+    weak_bullets = []
+    
+    for sentence in sentences:
+        s = sentence.strip()
+        # Clean up common bullet markers like -, *, •
+        clean_s = re.sub(r'^[-•*]\s*', '', s).strip()
+        
+        # Rule: Must be a descriptive sentence (> 5 words) and NOT contain digits, %, or $
+        if len(clean_s.split()) > 5 and not re.search(r'[\d%\$]', clean_s):
+            weak_bullets.append(clean_s)
+            
+        # Limit to top 3 to prevent overwhelming the user interface
+        if len(weak_bullets) == 3:
+            break
+            
+    return weak_bullets
+
 def analyze_structure(resume_text: str) -> dict:
     """Evaluates word count and core section headers."""
     words = resume_text.split()
@@ -47,8 +71,6 @@ def analyze_structure(resume_text: str) -> dict:
     has_education = bool(re.search(r'\b(education|university|college|btech|b\.tech|degree)\b', resume_text))
     has_experience = bool(re.search(r'\b(experience|employment|internship|work history)\b', resume_text))
     has_skills = bool(re.search(r'\b(skills|technologies|languages)\b', resume_text))
-    
-    # NEW: Explicitly check for a Projects section
     has_projects = bool(re.search(r'\b(projects|academic projects|personal projects)\b', resume_text))
     
     return {
@@ -75,11 +97,10 @@ def analyze_formatting(resume_text: str, extracted_urls: list) -> dict:
     
     text_has_github = bool(re.search(r'github\.com', resume_text))
     
-    # NEW: Isolate and count unique repository URLs (GitHub, GitLab, Bitbucket)
+    # Isolate and count unique repository URLs (GitHub, GitLab, Bitbucket)
     repo_links = set([url for url in extracted_urls if 'github.com' in url or 'gitlab.com' in url])
     has_github = text_has_github or (len(repo_links) > 0)
     
-    # We count the unique number of repo links found to map them to projects
     repo_link_count = len(repo_links)
     
     return {
@@ -91,7 +112,7 @@ def analyze_formatting(resume_text: str, extracted_urls: list) -> dict:
     }
 
 def get_complete_ats_analysis(resume_text: str, job_description: str, extracted_urls: list):
-    """Gathers all parameters needed for the total ATS score formula."""
+    """Gathers all parameters needed for the total ATS score formula and UI widgets."""
     if not resume_text or not job_description:
         return {}
 
@@ -116,10 +137,11 @@ def get_complete_ats_analysis(resume_text: str, job_description: str, extracted_
     else:
         missing_skills = set(jd_entities)
 
-    # 2. Extract Sub-metrics
+    # 2. Extract Sub-metrics & Weak Bullet Sentences
     metrics_count = analyze_metrics(resume_text)
     structure_data = analyze_structure(resume_text)
     formatting_data = analyze_formatting(resume_text, extracted_urls)
+    weak_bullets = find_weak_bullets(resume_text)
 
     return {
         "skills": {
@@ -128,5 +150,6 @@ def get_complete_ats_analysis(resume_text: str, job_description: str, extracted_
         },
         "metrics_count": metrics_count,
         "structure": structure_data,
-        "formatting": formatting_data
+        "formatting": formatting_data,
+        "weak_bullets": weak_bullets
     }

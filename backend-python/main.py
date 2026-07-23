@@ -30,9 +30,6 @@ class BulletRequest(BaseModel):
     bullet: str
 
 # ------------------------------------------------------------------
-# Route 1: Grok AI Bullet Rewriter Endpoint
-# ------------------------------------------------------------------
-# ------------------------------------------------------------------
 # Route 1: Groq AI Bullet Rewriter Endpoint
 # ------------------------------------------------------------------
 @app.post("/internal/v1/rewrite-bullet")
@@ -59,7 +56,7 @@ async def rewrite_bullet(request: BulletRequest):
             "Content-Type": "application/json"
         }
         
-        # Updated Payload: Using latest LLaMA 3.1 model and explicit parameters
+        # Payload for Groq's LLaMA 3.1 model
         payload = {
             "model": "llama-3.1-8b-instant", 
             "messages": [
@@ -77,7 +74,6 @@ async def rewrite_bullet(request: BulletRequest):
                 headers=headers, 
                 timeout=15.0
             )
-            # If Groq returns a 400 error, this triggers the HTTPStatusError exception block below
             response.raise_for_status()
             
             data = response.json()
@@ -86,7 +82,6 @@ async def rewrite_bullet(request: BulletRequest):
             
         return {"status": "success", "rewritten_bullet": rewritten_text}
         
-    # NEW: Catch exact HTTP errors from Groq so we can see the exact reason it failed
     except httpx.HTTPStatusError as exc:
         error_details = exc.response.text
         print(f"Groq API Rejected Request: {exc.response.status_code} - {error_details}")
@@ -95,6 +90,7 @@ async def rewrite_bullet(request: BulletRequest):
     except Exception as e:
         print(f"AI Rewriter Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to communicate with Groq AI service.")
+
 # ------------------------------------------------------------------
 # Route 2: Main ATS Extraction and Scoring Endpoint
 # ------------------------------------------------------------------
@@ -149,6 +145,7 @@ async def extract_and_score(request: Request):
             "metrics_detected": analysis_data["metrics_count"],
             "structure_check": analysis_data["structure"],
             "formatting_check": analysis_data["formatting"],
+            "weak_bullets": analysis_data["weak_bullets"],
             "message": "Industry-grade ATS analysis complete!"
         }
         

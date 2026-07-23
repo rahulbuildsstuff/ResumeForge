@@ -1,84 +1,106 @@
 def calculate_total_ats_score(analysis_data: dict) -> dict:
-    """Calculates the total ATS score and generates dynamic suggestions."""
-    if not analysis_data:
-        return {"score": 0, "suggestions": []}
-
+    """
+    Calculates the final ATS score out of 100 based on four weighted categories:
+    1. Technical Match (45%)
+    2. Proof of Impact (30%)
+    3. ATS Structure (15%)
+    4. Contact & Links (10%)
+    """
+    score = 0
     suggestions = []
 
-    # --- 1. Semantic Score ---
-    skills = analysis_data.get("skills", {})
-    matched = skills.get("matched", [])
-    missing = skills.get("missing", [])
-    total_required = len(matched) + len(missing)
-    
-    s_semantic = (len(matched) / total_required) * 100.0 if total_required > 0 else 0.0
+    # ---------------------------------------------------------
+    # 1. Technical Match (45%)
+    # ---------------------------------------------------------
+    matched = len(analysis_data["skills"]["matched"])
+    missing = len(analysis_data["skills"]["missing"])
+    total_skills = matched + missing
 
-    if len(missing) > 0:
-        # Suggest up to 3 missing keywords to avoid overwhelming the user
-        suggestions.append(f"Add missing keywords to your resume to pass the semantic filter: {', '.join(missing[:3])}.")
-
-    # --- 2. Metrics Score ---
-    metrics_count = analysis_data.get("metrics_count", 0)
-    e_metrics = min((metrics_count / 5.0) * 100.0, 100.0)
-
-    if metrics_count < 5:
-        suggestions.append(f"Only {metrics_count} numerical metrics found. Use numbers, %, and $ (e.g., 'Increased efficiency by 20%') to prove your impact.")
-
-    # --- 3. Structure Score ---
-    structure = analysis_data.get("structure", {})
-    word_count = structure.get("word_count", 0)
-    
-    if 400 <= word_count <= 900:
-        word_score = 100.0
-    elif word_count < 400:
-        word_score = max((word_count / 400.0) * 100.0, 20.0)
-        suggestions.append(f"Your resume is too short ({word_count} words). Aim for at least 400 words to ensure ATS parsers have enough text to read.")
+    if total_skills > 0:
+        tech_score = (matched / total_skills) * 45
+        score += tech_score
     else:
-        word_score = max(100.0 - ((word_count - 900) / 10.0), 40.0)
-        suggestions.append(f"Your resume is too long ({word_count} words). Edit it down to under 900 words to maintain recruiter attention.")
-        
-    sections_found = sum([
-        structure.get("has_education", False),
-        structure.get("has_experience", False),
-        structure.get("has_skills", False),
-        structure.get("has_projects", False)
-    ])
-    section_score = (sections_found / 4.0) * 100.0
+        suggestions.append("No technical skills extracted. Ensure your resume highlights specific tools and languages.")
+
+    if missing > 0:
+        # Suggest the top 3 missing skills to the user
+        missing_preview = ", ".join(analysis_data['skills']['missing'][:3])
+        suggestions.append(f"Missing critical JD keywords. Consider adding: {missing_preview}.")
+
+    # ---------------------------------------------------------
+    # 2. Proof of Impact (30%)
+    # ---------------------------------------------------------
+    metrics = analysis_data["metrics_count"]
+    # Target is 5 metrics. If they have 5 or more, they get the full 30 points.
+    impact_score = min((metrics / 5.0), 1.0) * 30
+    score += impact_score
+
+    # ---------------------------------------------------------
+    # NEW: Smart Bullet Fixer Integration
+    # ---------------------------------------------------------
+    weak_bullets = analysis_data.get("weak_bullets", [])
+    if len(weak_bullets) > 0:
+        # Insert this at the very beginning of suggestions so it is highly visible
+        suggestions.insert(0, f"Detected {len(weak_bullets)} sentences lacking metrics. Scroll down to the Smart Bullet Fixer to upgrade them with AI.")
+    elif metrics < 5:
+        suggestions.append(f"Low impact score ({metrics}/5 metrics found). Use the AI Rewriter to add numbers, %, and $.")
+
+    # ---------------------------------------------------------
+    # 3. ATS Structure (15%)
+    # ---------------------------------------------------------
+    structure = analysis_data["structure"]
+    struct_score = 0
     
-    if not structure.get("has_projects", False):
-        suggestions.append("CRITICAL: Missing 'Projects' section. This is essential for technical roles.")
-        
-    c_structure = (word_score * 0.5) + (section_score * 0.5)
+    if 400 <= structure.get("word_count", 0) <= 900:
+        struct_score += 3
+    else:
+        suggestions.append("Word count is outside the optimal ATS range (400-900 words).")
 
-    # --- 4. Formatting Score ---
-    formatting = analysis_data.get("formatting", {})
-    has_email = 1.0 if formatting.get("has_email") else 0.0
-    has_phone = 1.0 if formatting.get("has_phone") else 0.0
-    has_linkedin = 1.0 if formatting.get("has_linkedin") else 0.0
+    if structure.get("has_education"): struct_score += 3
+    else: suggestions.append("Missing 'Education' section header.")
+
+    if structure.get("has_experience"): struct_score += 3
+    else: suggestions.append("Missing 'Experience' or 'Work History' section header.")
+
+    if structure.get("has_skills"): struct_score += 3
+    else: suggestions.append("Missing 'Skills' section header.")
+
+    if structure.get("has_projects"): struct_score += 3
+    else: suggestions.append("Missing 'Projects' section header. Highly recommended for tech roles.")
+
+    score += struct_score
+
+    # ---------------------------------------------------------
+    # 4. Contact & Links (10%)
+    # ---------------------------------------------------------
+    formatting = analysis_data["formatting"]
+    format_score = 0
     
-    base_formatting_score = ((has_email + has_phone + has_linkedin) / 3.0) * 100.0
+    if formatting.get("has_email"): format_score += 2
+    else: suggestions.append("Missing an email address.")
 
-    if not formatting.get("has_linkedin"):
-        suggestions.append("Missing LinkedIn profile. Ensure your URL is written out or hyperlinked correctly.")
+    if formatting.get("has_phone"): format_score += 2
+    else: suggestions.append("Missing a phone number.")
 
-    repo_link_count = formatting.get("repo_link_count", 0)
-    repo_score_multiplier = 1.0
-    
-    if structure.get("has_projects", False):
-        if repo_link_count == 0:
-            repo_score_multiplier = 0.5
-            suggestions.append("CRITICAL: You have a Projects section, but 0 repository links were found. Add GitHub/GitLab links to your code.")
-        elif repo_link_count == 1:
-            repo_score_multiplier = 0.8
-            suggestions.append("Only 1 repository link found. Ensure EVERY project has a corresponding hyperlink to the code.")
-            
-    f_formatting = base_formatting_score * repo_score_multiplier
+    if formatting.get("has_linkedin"): format_score += 2
+    else: suggestions.append("Missing a LinkedIn profile link.")
 
-    # --- Final Math ---
-    total_ats_score = (s_semantic * 0.45) + (e_metrics * 0.30) + (c_structure * 0.15) + (f_formatting * 0.10)
+    if formatting.get("has_github"): format_score += 2
+    else: suggestions.append("Missing a GitHub profile link.")
 
-    # Return BOTH the score and the new suggestions array
+    if formatting.get("repo_link_count", 0) >= 1: 
+        format_score += 2
+    elif structure.get("has_projects"): 
+        suggestions.append("Projects section found, but no repository links detected. Ensure your code is linked!")
+
+    score += format_score
+
+    # ---------------------------------------------------------
+    # Final Calculation
+    # ---------------------------------------------------------
+    final_score = int(min(round(score), 100))
+
     return {
-        "score": int(round(total_ats_score)),
-        "suggestions": suggestions
+        "score": final_score,
+        "suggestions": suggestions[:4] # Only return top 4 suggestions so the UI stays clean
     }
