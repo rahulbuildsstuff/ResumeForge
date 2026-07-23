@@ -58,19 +58,19 @@ async def extract_and_score(request: Request):
         analysis_data = get_complete_ats_analysis(cleaned_resume, cleaned_jd, extracted_urls)
         
         # 6. Calculate final score using your exact mathematical formula
-        match_score = calculate_total_ats_score(analysis_data)
+        scoring_results = calculate_total_ats_score(analysis_data)
         
         # 7. Return comprehensive results to React
         return {
             "status": "success",
-            "score": match_score,
+            "score": scoring_results["score"],
+            "suggestions": scoring_results["suggestions"], # ADD THIS LINE!
             "matched_skills": analysis_data["skills"]["matched"],
             "missing_skills": analysis_data["skills"]["missing"],
             "metrics_detected": analysis_data["metrics_count"],
             "structure_check": analysis_data["structure"],
             "formatting_check": analysis_data["formatting"],
-            "message": "Industry-grade ATS analysis complete!",
-            "extracted_text": cleaned_resume 
+            "message": "Industry-grade ATS analysis complete!"
         }
         
     except Exception as e:
