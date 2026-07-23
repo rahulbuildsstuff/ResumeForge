@@ -133,6 +133,8 @@ const ResumeAnalyzer = () => {
 
             {/* Right Column: Structure & Formatting Checklist */}
             <div className="space-y-6">
+              
+              {/* 3. Structure Check */}
               <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 mb-3">3. ATS Structure (15%)</h3>
                 <ul className="space-y-2 text-sm">
@@ -148,15 +150,27 @@ const ResumeAnalyzer = () => {
                     <span>"Experience" Section:</span>
                     <span>{structure?.has_experience ? '✅ Found' : '❌ Missing'}</span>
                   </li>
-                  <li className="flex justify-between pt-2">
+                  <li className="flex justify-between border-b border-gray-200 py-2">
                     <span>"Skills" Section:</span>
                     <span>{structure?.has_skills ? '✅ Found' : '❌ Missing'}</span>
+                  </li>
+                  
+                  {/* Projects Section with Inline Warning */}
+                  <li className="flex justify-between pt-2">
+                    <div className="flex flex-col">
+                      <span>"Projects" Section:</span>
+                      {!structure?.has_projects && (
+                        <span className="text-xs text-red-500 mt-1 font-semibold">⚠️ Crucial for tech roles. Add this section!</span>
+                      )}
+                    </div>
+                    <span>{structure?.has_projects ? '✅ Found' : '❌ Missing'}</span>
                   </li>
                 </ul>
               </div>
 
+              {/* 4. Formatting Check */}
               <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">4. Contact Data (10%)</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">4. Contact & Links (10%)</h3>
                 <ul className="space-y-2 text-sm">
                   <li className="flex justify-between border-b border-gray-200 pb-2">
                     <span>Email Address:</span>
@@ -166,9 +180,29 @@ const ResumeAnalyzer = () => {
                     <span>Phone Number:</span>
                     <span>{formatting?.has_phone ? '✅ Found' : '❌ Missing'}</span>
                   </li>
-                  <li className="flex justify-between pt-2">
+                  <li className="flex justify-between border-b border-gray-200 py-2">
                     <span>LinkedIn Profile:</span>
                     <span>{formatting?.has_linkedin ? '✅ Found' : '❌ Missing'}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-gray-200 py-2">
+                    <span>GitHub Profile:</span>
+                    <span>{formatting?.has_github ? '✅ Found' : '❌ Missing'}</span>
+                  </li>
+                  
+                  {/* Repo Links Counter with Smart Warning */}
+                  <li className="flex justify-between pt-2">
+                    <div className="flex flex-col">
+                      <span>Project Repo Links:</span>
+                      {structure?.has_projects && formatting?.repo_link_count === 0 && (
+                        <span className="text-xs text-red-500 mt-1 font-semibold">⚠️ Projects found, but 0 repo links detected!</span>
+                      )}
+                      {structure?.has_projects && formatting?.repo_link_count > 0 && formatting?.repo_link_count < 2 && (
+                        <span className="text-xs text-red-500 mt-1 font-semibold">⚠️ Ensure every project has a code link.</span>
+                      )}
+                    </div>
+                    <span className={`font-bold ${formatting?.repo_link_count >= 2 ? 'text-green-600' : 'text-red-500'}`}>
+                      {formatting?.repo_link_count > 0 ? `${formatting?.repo_link_count} Found` : '❌ Missing'}
+                    </span>
                   </li>
                 </ul>
               </div>

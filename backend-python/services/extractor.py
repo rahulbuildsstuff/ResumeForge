@@ -35,40 +35,62 @@ def extract_entities(text: str) -> list:
     return list(entities)
 
 def analyze_metrics(resume_text: str) -> int:
-    """Counts numbers, percentages, and monetary signs to score quantifiable impact (E_metrics)."""
-    # Matches patterns like '20%', '$50k', '15+', '3x'
+    """Counts numbers, percentages, and monetary signs to score quantifiable impact."""
     metrics_patterns = re.findall(r'(\d+[%$xX]|\d+\+|\$[\d,]+)', resume_text)
     return len(metrics_patterns)
 
 def analyze_structure(resume_text: str) -> dict:
-    """Evaluates word count and core section headers (C_structure)."""
+    """Evaluates word count and core section headers."""
     words = resume_text.split()
     word_count = len(words)
     
     has_education = bool(re.search(r'\b(education|university|college|btech|b\.tech|degree)\b', resume_text))
-    has_experience = bool(re.search(r'\b(experience|projects|employment|internship)\b', resume_text))
+    has_experience = bool(re.search(r'\b(experience|employment|internship|work history)\b', resume_text))
     has_skills = bool(re.search(r'\b(skills|technologies|languages)\b', resume_text))
+    
+    # NEW: Explicitly check for a Projects section
+    has_projects = bool(re.search(r'\b(projects|academic projects|personal projects)\b', resume_text))
     
     return {
         "word_count": word_count,
         "has_education": has_education,
         "has_experience": has_experience,
-        "has_skills": has_skills
+        "has_skills": has_skills,
+        "has_projects": has_projects
     }
 
-def analyze_formatting(resume_text: str) -> dict:
-    """Checks for core parsing and contact compliance elements (F_formatting)."""
-    has_email = bool(re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', resume_text))
-    has_phone = bool(re.search(r'(\+\d{1,3}[- ]?)?\d{10}', resume_text) or re.search(r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b', resume_text))
-    has_linkedin = bool(re.search(r'linkedin\.com', resume_text))
+def analyze_formatting(resume_text: str, extracted_urls: list) -> dict:
+    """Checks for contact info and repository links in both text and hidden URLs."""
+    text_has_email = bool(re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', resume_text))
+    link_has_email = any('mailto:' in url for url in extracted_urls)
+    has_email = text_has_email or link_has_email
+    
+    text_has_phone = bool(re.search(r'(\+\d{1,3}[- ]?)?\d{10}', resume_text) or re.search(r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b', resume_text))
+    link_has_phone = any('tel:' in url for url in extracted_urls)
+    has_phone = text_has_phone or link_has_phone
+    
+    text_has_linkedin = bool(re.search(r'linkedin\.com', resume_text))
+    link_has_linkedin = any('linkedin.com' in url for url in extracted_urls)
+    has_linkedin = text_has_linkedin or link_has_linkedin
+    
+    text_has_github = bool(re.search(r'github\.com', resume_text))
+    
+    # NEW: Isolate and count unique repository URLs (GitHub, GitLab, Bitbucket)
+    repo_links = set([url for url in extracted_urls if 'github.com' in url or 'gitlab.com' in url])
+    has_github = text_has_github or (len(repo_links) > 0)
+    
+    # We count the unique number of repo links found to map them to projects
+    repo_link_count = len(repo_links)
     
     return {
         "has_email": has_email,
         "has_phone": has_phone,
-        "has_linkedin": has_linkedin
+        "has_linkedin": has_linkedin,
+        "has_github": has_github,
+        "repo_link_count": repo_link_count
     }
 
-def get_complete_ats_analysis(resume_text: str, job_description: str):
+def get_complete_ats_analysis(resume_text: str, job_description: str, extracted_urls: list):
     """Gathers all parameters needed for the total ATS score formula."""
     if not resume_text or not job_description:
         return {}
@@ -97,7 +119,7 @@ def get_complete_ats_analysis(resume_text: str, job_description: str):
     # 2. Extract Sub-metrics
     metrics_count = analyze_metrics(resume_text)
     structure_data = analyze_structure(resume_text)
-    formatting_data = analyze_formatting(resume_text)
+    formatting_data = analyze_formatting(resume_text, extracted_urls)
 
     return {
         "skills": {
