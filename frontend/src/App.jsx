@@ -198,13 +198,13 @@ export default function App() {
             >
               <input ref={fileInput} type="file" accept=".pdf" className="hidden" onChange={(e) => onFilePicked(e.target.files?.[0])} />
               <div className="flex items-center justify-between">
-                <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">Resume</div>
-                <UploadCloud className="h-4 w-4 text-subtle transition-colors group-hover:text-ink" />
+                <div className="text-[20px] font-medium tracking-wider text-subtle uppercase">Resume</div>
+                <UploadCloud className="h-8 w-8 text-subtle transition-colors group-hover:text-ink" />
               </div>
 
               <div className="mt-14 mb-2">
-                <p className="text-[15px] font-medium text-ink">Drop your PDF here</p>
-                <p className="mt-1 text-[13px] text-subtle">or click to browse — max 10 MB</p>
+                <p className="text-[20px] font-medium text-ink">Drop your PDF here</p>
+                <p className="mt-1 text-[15px] text-subtle">or click to browse — max 10 MB</p>
               </div>
 
               {fileName && (
@@ -221,8 +221,8 @@ export default function App() {
             {/* JD */}
             <div className="rounded-xl border border-cream-border bg-cream backdrop-blur-xl p-4 sm:p-6 lg:col-span-3">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">Job description</div>
-                <span className="text-[11px] text-subtle">{jd.length} chars</span>
+                <div className="text-[15px] font-medium tracking-wider text-subtle uppercase">Job description</div>
+                <span className="text-[15px] text-subtle">{jd.length} chars</span>
               </div>
               <textarea
                 value={jd}
@@ -231,7 +231,7 @@ export default function App() {
                 placeholder="Paste the job description here…"
                 className="mt-4 w-full resize-none bg-transparent text-[14px] leading-relaxed text-ink placeholder:text-subtle focus:outline-none"
               />
-              <div className="mt-2 flex items-center justify-between border-t border-cream-border pt-3 text-[11px] text-subtle">
+              <div className="mt-2 flex items-center justify-between border-t border-cream-border pt-3 text-[15px] text-subtle">
                 <span>Tip: paste the full listing for best matching</span>
                 <AnalyzeButton onClick={runAnalyze} disabled={analyzing} loading={analyzing}>
                   {analyzing ? (
