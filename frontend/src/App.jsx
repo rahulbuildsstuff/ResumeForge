@@ -384,7 +384,7 @@ export default function App() {
               </BentoCard>
 
               <BentoCard title="ATS Structure" hint={`${STRUCTURE_CHECKS.filter(c => c.ok).length} / ${STRUCTURE_CHECKS.length}`} tint="mint">
-                <ul className="divide-y divide-cream-border">
+                <ul className="divide-y divide-cream-border flex-1 flex flex-col justify-evenly">
                   {STRUCTURE_CHECKS.map((c) => (
                     <li key={c.label} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
                       <div className="flex min-w-0 items-start gap-2.5">
@@ -405,7 +405,7 @@ export default function App() {
               </BentoCard>
 
               <BentoCard title="Contact & Links" hint={`${CONTACT_CHECKS.filter(c => c.ok).length} / ${CONTACT_CHECKS.length}`} tint="violet">
-                <ul className="divide-y divide-cream-border">
+                <ul className="divide-y divide-cream-border flex-1 flex flex-col justify-evenly">
                   {CONTACT_CHECKS.map((c) => {
                     const Icon = c.icon;
                     return (
@@ -512,12 +512,14 @@ function BentoCard({
   };
 
   return (
-    <div className={`rounded-xl backdrop-blur-xl p-4 sm:p-5 shadow-sm transition-all ${tintClasses[tint]}`}>
-      <div className="mb-4 flex items-center justify-between">
+    <div className={`rounded-xl backdrop-blur-xl p-4 sm:p-5 shadow-sm transition-all flex flex-col h-full ${tintClasses[tint]}`}>
+      <div className="mb-4 flex items-center justify-between shrink-0">
         <h4 className="text-[13px] font-medium text-ink">{title}</h4>
         {hint && <span className="text-[11px] tabular-nums text-subtle">{hint}</span>}
       </div>
-      {children}
+      <div className="flex-1 flex flex-col">
+        {children}
+      </div>
     </div>
   );
 }
