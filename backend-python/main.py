@@ -94,15 +94,22 @@ async def rewrite_bullet(request: BulletRequest):
 # ------------------------------------------------------------------
 # Route 2: Main ATS Extraction and Scoring Endpoint
 # ------------------------------------------------------------------
-async def check_missing_project_links(resume_text: str, extracted_urls: list) -> list:
+import json
+
+async def analyze_projects_with_llm(resume_text: str, extracted_urls: list) -> dict:
     if not GROQ_API_KEY:
-        return []
+        return {"total_projects": 0, "projects_with_links": 0, "missing_project_links": []}
         
     prompt = (
-        "You are an expert ATS parser. I will provide the text of a resume, and a list of hyperlinks extracted from it.\n"
+        "You are an expert ATS parser. I will provide the text of a resume and a list of hyperlinks extracted from it.\n"
         "1. Identify the 'Projects' section.\n"
-        "2. List the names of any projects that DO NOT have a repository link (like github, gitlab, or a source code link) mentioned near them or matching the extracted hyperlinks.\n"
-        "3. Return ONLY a comma-separated list of the project names that are missing links. If all projects have links, or if there are no projects, return exactly the word 'NONE'. Do not include conversational text.\n\n"
+        "2. Count the total number of projects listed.\n"
+        "3. Identify if each project has a repository link (e.g., github, gitlab) associated with it.\n"
+        "4. Output a JSON object with exactly these keys:\n"
+        "   - 'total_projects': integer\n"
+        "   - 'projects_with_links': integer\n"
+        "   - 'missing_project_links': array of strings (names of projects missing links)\n\n"
+        "Return ONLY the JSON object. Do not include any markdown formatting like ```json or conversation.\n\n"
         f"Hyperlinks: {', '.join(extracted_urls)}\n\n"
         f"Resume:\n{resume_text}"
     )
@@ -116,7 +123,8 @@ async def check_missing_project_links(resume_text: str, extracted_urls: list) ->
             "model": "llama-3.1-8b-instant", 
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
-            "max_tokens": 100
+            "max_tokens": 150,
+            "response_format": {"type": "json_object"}
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -125,15 +133,10 @@ async def check_missing_project_links(resume_text: str, extracted_urls: list) ->
             )
             response.raise_for_status()
             content = response.json()['choices'][0]['message']['content'].strip()
-            
-            if 'NONE' in content.upper() or not content:
-                return []
-            
-            projects = [p.strip() for p in content.split(',') if p.strip()]
-            return projects
+            return json.loads(content)
     except Exception as e:
         print(f"Error checking project links: {e}")
-        return []
+        return {"total_projects": 0, "projects_with_links": 0, "missing_project_links": []}
 
 @app.post("/internal/v1/extract-and-score")
 async def extract_and_score(request: Request):
@@ -174,8 +177,11 @@ async def extract_and_score(request: Request):
         analysis_data = get_complete_ats_analysis(cleaned_resume, cleaned_jd, extracted_urls)
         
         # 4.5 Check for specific projects missing links using Groq
-        missing_projects = await check_missing_project_links(cleaned_resume, extracted_urls)
-        analysis_data["missing_project_links"] = missing_projects
+        projects_info = await analyze_projects_with_llm(cleaned_resume, extracted_urls)
+        analysis_data["missing_project_links"] = projects_info.get("missing_project_links", [])
+        
+        # Override the repo link count in formatting data with the accurate project link count
+        analysis_data["formatting"]["repo_link_count"] = projects_info.get("projects_with_links", 0)
         
         # 5. Compute mathematical ATS score & generate actionable suggestions
         scoring_results = calculate_total_ats_score(analysis_data)

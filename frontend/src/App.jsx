@@ -313,7 +313,7 @@ export default function App() {
               </div>
 
               <div className="flex flex-col gap-4 rounded-xl border border-amber-tint-border bg-amber-tint p-5 sm:p-7 shadow-md lg:col-span-2">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 shrink-0">
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-amber-400/25 bg-amber-500/15">
                     <img src="/alarm.png" alt="Alarm" className="h-6 w-6 object-contain" />
                   </div>
@@ -321,18 +321,18 @@ export default function App() {
                     {suggestions.length > 0 ? `${suggestions.length} high-priority action items` : 'Looking good!'}
                   </h3>
                 </div>
-                <ul className="mt-2 space-y-3 text-[16px] text-subtle w-full">
+                <ul className="mt-2 space-y-3 text-[16px] text-subtle w-full flex-1 flex flex-col justify-evenly">
                   {suggestions.length > 0 ? (
                     suggestions.map((s, i) => (
                       <li key={i} className="flex items-start gap-3">
-                        <span className="text-amber-500 shrink-0">➥</span>
-                        <span>{s}</span>
+                        <span className="text-amber-500 shrink-0 mt-0.5">➥</span>
+                        <span className="flex-1">{s}</span>
                       </li>
                     ))
                   ) : (
                     <li className="flex items-start gap-3">
-                      <span className="text-amber-500 shrink-0">➥</span>
-                      <span>No major issues detected. Great job!</span>
+                      <span className="text-amber-500 shrink-0 mt-0.5">➥</span>
+                      <span className="flex-1">No major issues detected. Great job!</span>
                     </li>
                   )}
                 </ul>
