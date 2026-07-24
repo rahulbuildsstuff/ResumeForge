@@ -15,7 +15,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-import PillNav from "@/components/ui/PillNav";
+
 import { AiRewriteButton } from "@/components/ui/AiRewriteButton";
 import { AnalyzeButton } from "@/components/ui/AnalyzeButton";
 const Cloudscape = lazy(() => import("@/components/ui/Cloudscape"));
@@ -175,23 +175,23 @@ export default function App() {
       )}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-slate-950/30" />
       <div className="relative z-10">
-        <PillNav
-          items={[
-            { label: "Home", href: "#" },
-            { label: "Features", href: "#features" },
-            { label: "Bullet Fixer", href: "#bullet-fixer" },
-            { label: "Docs", href: "#docs" },
-          ]}
-          activeHref="#"
-          baseColor="rgba(8,9,11,0.92)"
-          pillColor="rgba(255,255,255,0.08)"
-          hoveredPillTextColor="#ffffff"
-          pillTextColor="#ffffff"
-          className="md:left-1/2 md:-translate-x-1/2"
-        />
+        <nav className="absolute top-4 left-1/2 z-[99] w-[95%] max-w-4xl -translate-x-1/2">
+          <div className="flex items-center justify-between rounded-full border border-white/10 bg-white/10 px-4 py-2 backdrop-blur-md shadow-lg">
+            <div className="flex items-center gap-2 pl-2 text-white">
+              <Sparkles className="h-5 w-5" />
+              <span className="text-[16px] font-medium tracking-wide">ResumeForgeAI</span>
+            </div>
+
+            <div className="flex items-center gap-6 pr-2 text-[14px] text-white/70">
+              <a href="#upload" className="hover:text-white transition-colors">Upload</a>
+              <a href="#results" className="hover:text-white transition-colors">Results</a>
+              <a href="#bullet-fixer" className="hover:text-white transition-colors">Bullet Fixer</a>
+            </div>
+          </div>
+        </nav>
 
         {/* Hero / Input */}
-        <section className="mx-auto max-w-7xl px-3 pt-24 pb-6 sm:px-4 sm:pt-28 md:pt-32 lg:px-6 lg:pt-36 sm:pb-8 lg:pb-10">
+        <section id="upload" className="mx-auto max-w-7xl px-3 pt-24 pb-6 sm:px-4 sm:pt-28 md:pt-32 lg:px-6 lg:pt-36 sm:pb-8 lg:pb-10">
           <div className="mb-6 sm:mb-10">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cream-border bg-cream px-2.5 py-1 text-[11px] text-subtle sm:mb-5">
               <span className="h-1 w-1 rounded-full bg-emerald-400" />
