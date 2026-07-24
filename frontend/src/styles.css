@@ -12,8 +12,7 @@
   --color-border: var(--border);
   --color-ring: var(--ring);
 
-  /* ResumeForge dashboard palette */
-  --color-cream: var(--cream);
+    --color-cream: var(--cream);
   --color-cream-border: var(--cream-border);
   --color-blue-tint: var(--blue-tint);
   --color-blue-tint-border: var(--blue-tint-border);

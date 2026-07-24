@@ -5,9 +5,9 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
     score = 0
     suggestions = []
 
-    # ---------------------------------------------------------
-    # 1. Technical Match (45%)
-    # ---------------------------------------------------------
+    
+    
+    
     matched = len(analysis_data["skills"]["matched"])
     missing = len(analysis_data["skills"]["missing"])
     total_skills = matched + missing
@@ -22,9 +22,9 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
         missing_preview = ", ".join(analysis_data['skills']['missing'][:3])
         suggestions.append(f"Missing critical JD keywords. Consider adding: {missing_preview}.")
 
-    # ---------------------------------------------------------
-    # 2. Proof of Impact (30%)
-    # ---------------------------------------------------------
+    
+    
+    
     metrics = analysis_data["metrics_count"]
     impact_score = min((metrics / 5.0), 1.0) * 30
     score += impact_score
@@ -33,13 +33,13 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
     if len(weak_bullets) > 0:
         suggestions.insert(0, f"Detected {len(weak_bullets)} sentences lacking metrics. Scroll down to the Smart Bullet Fixer to upgrade them with AI.")
         
-    # Changed to 'if' so it triggers independently of weak bullets!
+    
     if metrics < 5:  
         suggestions.append(f"Low impact score ({metrics}/5 metrics found). Use the AI Rewriter to add numbers, %, and $.")
 
-    # ---------------------------------------------------------
-    # 3. ATS Structure (15%)
-    # ---------------------------------------------------------
+    
+    
+    
     structure = analysis_data["structure"]
     struct_score = 0
     
@@ -70,9 +70,9 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
 
     score += struct_score
 
-    # ---------------------------------------------------------
-    # 4. Contact & Links (10%)
-    # ---------------------------------------------------------
+    
+    
+    
     formatting = analysis_data["formatting"]
     format_score = 0
     
@@ -99,7 +99,7 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
     repo_count = formatting.get("repo_link_count", 0)
     has_projects = structure.get("has_projects")
 
-    # Stricter Repo Link checks
+    
     if repo_count >= 2: 
         format_score += 2
     elif repo_count == 1:
@@ -116,12 +116,12 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
 
     score += format_score
 
-    # ---------------------------------------------------------
-    # Final Calculation
-    # ---------------------------------------------------------
+    
+    
+    
     final_score = min(round(score), 100)
 
     return {
         "score": final_score,
-        "suggestions": suggestions # <-- Limit removed, it returns everything!
+        "suggestions": suggestions 
     }

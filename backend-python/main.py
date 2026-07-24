@@ -1,7 +1,7 @@
 import os
 import io
 import httpx
-import fitz  # PyMuPDF for extracting hidden hyperlinks
+import fitz  
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,13 +10,13 @@ from dotenv import load_dotenv
 from services.extractor import get_complete_ats_analysis
 from services.scorer import calculate_total_ats_score
 
-# Load environment variables (GROQ_API_KEY) from .env
+
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 app = FastAPI(title="Industry-Standard ATS Engine")
 
-# Configure CORS
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,13 +25,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic schema for the AI Rewriter request
+
 class BulletRequest(BaseModel):
     bullet: str
 
-# ------------------------------------------------------------------
-# Route 1: Groq AI Bullet Rewriter Endpoint
-# ------------------------------------------------------------------
+
+
+
 @app.post("/internal/v1/rewrite-bullet")
 async def rewrite_bullet(request: BulletRequest):
     if not GROQ_API_KEY:
@@ -56,7 +56,7 @@ async def rewrite_bullet(request: BulletRequest):
             "Content-Type": "application/json"
         }
         
-        # Payload for Groq's LLaMA 3.1 model
+        
         payload = {
             "model": "llama-3.1-8b-instant", 
             "messages": [
@@ -91,9 +91,9 @@ async def rewrite_bullet(request: BulletRequest):
         print(f"AI Rewriter Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to communicate with Groq AI service.")
 
-# ------------------------------------------------------------------
-# Route 2: Main ATS Extraction and Scoring Endpoint
-# ------------------------------------------------------------------
+
+
+
 import json
 
 async def analyze_projects_with_llm(resume_text: str, extracted_urls: list) -> dict:
@@ -141,7 +141,7 @@ async def analyze_projects_with_llm(resume_text: str, extracted_urls: list) -> d
 @app.post("/internal/v1/extract-and-score")
 async def extract_and_score(request: Request):
     try:
-        # 1. Parse incoming multipart form data
+        
         form_data = await request.form()
         resume_upload = form_data.get("resume") or form_data.get("file") or form_data.get("pdf")
         job_description = form_data.get("jobDescription") or form_data.get("job_description")
@@ -152,10 +152,10 @@ async def extract_and_score(request: Request):
                 detail=f"Missing required fields. Received form keys: {list(form_data.keys())}"
             )
 
-        # 2. Read PDF into byte stream
+        
         pdf_bytes = await resume_upload.read()
         
-        # 3. Open document using PyMuPDF to parse visible text AND hidden hyperlinks
+        
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         
         extracted_text = ""
@@ -173,20 +173,20 @@ async def extract_and_score(request: Request):
         if not cleaned_resume:
             raise HTTPException(status_code=400, detail="Could not extract readable text from PDF.")
         
-        # 4. Perform NLP skill extraction & metadata analysis
+        
         analysis_data = get_complete_ats_analysis(cleaned_resume, cleaned_jd, extracted_urls)
         
-        # 4.5 Check for specific projects missing links using Groq
+        
         projects_info = await analyze_projects_with_llm(cleaned_resume, extracted_urls)
         analysis_data["missing_project_links"] = projects_info.get("missing_project_links", [])
         
-        # Override the repo link count in formatting data with the accurate project link count
+        
         analysis_data["formatting"]["repo_link_count"] = projects_info.get("projects_with_links", 0)
         
-        # 5. Compute mathematical ATS score & generate actionable suggestions
+        
         scoring_results = calculate_total_ats_score(analysis_data)
         
-        # 6. Return response to React dashboard
+        
         return {
             "status": "success",
             "score": scoring_results["score"],

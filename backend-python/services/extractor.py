@@ -50,14 +50,14 @@ def find_weak_bullets(resume_text: str) -> list:
     
     for sentence in sentences:
         s = sentence.strip()
-        # Clean up common bullet markers like -, *, •
+        
         clean_s = re.sub(r'^[-•*]\s*', '', s).strip()
         
-        # Rule: Must be a descriptive sentence (> 5 words) and NOT contain digits, %, or $
+        
         if len(clean_s.split()) > 5 and not re.search(r'[\d%\$]', clean_s):
             weak_bullets.append(clean_s)
             
-        # Limit to top 3 to prevent overwhelming the user interface
+        
         if len(weak_bullets) == 3:
             break
             
@@ -97,7 +97,7 @@ def analyze_formatting(resume_text: str, extracted_urls: list) -> dict:
     
     text_has_github = bool(re.search(r'github\.com', resume_text))
     
-    # Isolate and count unique repository URLs (GitHub, GitLab, Bitbucket)
+    
     repo_links = set([url for url in extracted_urls if 'github.com' in url or 'gitlab.com' in url])
     has_github = text_has_github or (len(repo_links) > 0)
     
@@ -116,7 +116,7 @@ def get_complete_ats_analysis(resume_text: str, job_description: str, extracted_
     if not resume_text or not job_description:
         return {}
 
-    # 1. Semantic Skill Extraction
+    
     jd_entities = extract_entities(job_description)
     resume_entities = extract_entities(resume_text)
     
@@ -137,7 +137,7 @@ def get_complete_ats_analysis(resume_text: str, job_description: str, extracted_
     else:
         missing_skills = set(jd_entities)
 
-    # 2. Extract Sub-metrics & Weak Bullet Sentences
+    
     metrics_count = analyze_metrics(resume_text)
     structure_data = analyze_structure(resume_text)
     formatting_data = analyze_formatting(resume_text, extracted_urls)

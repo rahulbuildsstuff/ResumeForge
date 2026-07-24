@@ -20,19 +20,16 @@ import { AiRewriteButton } from "@/components/ui/AiRewriteButton";
 import { AnalyzeButton } from "@/components/ui/AnalyzeButton";
 const Cloudscape = lazy(() => import("@/components/ui/Cloudscape"));
 
-/* ---------------- Component ---------------- */
 
 export default function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState(null);
-  const [jd, setJd] = useState(
-    "We're hiring a Senior Frontend Engineer with strong React/TypeScript skills. Experience with GraphQL, AWS, Kubernetes, and building performant dashboards is a plus.",
-  );
+  const [jd, setJd] = useState("");
   const [dragOver, setDragOver] = useState(false);
   
-  // Backend State
+
   const [score, setScore] = useState(0);
   const [suggestions, setSuggestions] = useState([]);
   const [metricsDetected, setMetricsDetected] = useState(0);
@@ -190,7 +187,7 @@ export default function App() {
           </div>
         </nav>
 
-        {/* Hero / Input */}
+        {}
         <section id="upload" className="mx-auto max-w-7xl px-3 pt-24 pb-6 sm:px-4 sm:pt-28 md:pt-32 lg:px-6 lg:pt-36 sm:pb-8 lg:pb-10">
           <div className="mb-6 sm:mb-10">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cream-border bg-cream px-2.5 py-1 text-[11px] text-subtle sm:mb-5">
@@ -208,7 +205,7 @@ export default function App() {
           </div>
 
           <div className="grid gap-2 sm:gap-3 lg:grid-cols-5">
-            {/* Upload */}
+            {}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -242,7 +239,7 @@ export default function App() {
               )}
             </div>
 
-            {/* JD */}
+            {}
             <div className="rounded-xl border border-cream-border bg-cream backdrop-blur-xl p-4 sm:p-6 lg:col-span-3">
               <div className="flex items-center justify-between">
                 <div className="text-[15px] font-medium tracking-wider text-subtle uppercase">Job description</div>
@@ -275,7 +272,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* Results */}
+        {}
         {analyzed && (
           <section id="results" className="mx-auto max-w-7xl px-3 pb-12 sm:px-4 lg:px-6 sm:pb-24 animate-fade-in">
             <div className="mb-8 flex items-center gap-3">
@@ -339,7 +336,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Bento grid */}
+            {}
             <div className="mt-2 grid gap-2 sm:mt-3 sm:gap-3 md:grid-cols-2">
               <BentoCard title="Technical Match" hint={`${MATCHED_SKILLS.length} / ${MATCHED_SKILLS.length + MISSING_SKILLS.length}`} tint="blue">
                 <div>
@@ -429,7 +426,7 @@ export default function App() {
               </BentoCard>
             </div>
 
-            {/* Smart Bullet Fixer */}
+            {}
             <div id="bullet-fixer" className="mt-2 rounded-xl border border-ai-tint-border bg-ai-tint backdrop-blur-xl shadow-sm sm:mt-3">
               <div className="flex items-start justify-between gap-4 border-b border-ai-tint-border px-4 py-4 sm:px-6 sm:py-5">
                 <div>
@@ -496,7 +493,6 @@ export default function App() {
   );
 }
 
-/* ---------------- Bits ---------------- */
 
 function BentoCard({
   title,
