@@ -1,569 +1,487 @@
-import React, { useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
+import {
+  Sparkles,
+  UploadCloud,
+  FileText,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Mail,
+  Phone,
+  Linkedin,
+  Github,
+  Link2,
+  ArrowUpRight,
+} from "lucide-react";
 
-const ResumeAnalyzer = () => {
-  // Input State
+import PillNav from "@/components/ui/PillNav";
+import { AiRewriteButton } from "@/components/ui/AiRewriteButton";
+import { AnalyzeButton } from "@/components/ui/AnalyzeButton";
+const Cloudscape = lazy(() => import("@/components/ui/Cloudscape"));
+
+/* ---------------- Component ---------------- */
+
+export default function App() {
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState(false);
   const [file, setFile] = useState(null);
-  const [jobDescription, setJobDescription] = useState("");
+  const [fileName, setFileName] = useState(null);
+  const [jd, setJd] = useState(
+    "We're hiring a Senior Frontend Engineer with strong React/TypeScript skills. Experience with GraphQL, AWS, Kubernetes, and building performant dashboards is a plus.",
+  );
+  const [dragOver, setDragOver] = useState(false);
   
-  // Dashboard Analytics State
-  const [score, setScore] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
-  const [matchedSkills, setMatchedSkills] = useState([]);
-  const [missingSkills, setMissingSkills] = useState([]);
-  const [metricsCount, setMetricsCount] = useState(0);
-  const [structure, setStructure] = useState({});
-  const [formatting, setFormatting] = useState({});
-  const [loading, setLoading] = useState(false);
+  // Backend State
+  const [score, setScore] = useState(0);
+  const [metricsDetected, setMetricsDetected] = useState(0);
+  const [MATCHED_SKILLS, setMatchedSkills] = useState([]);
+  const [MISSING_SKILLS, setMissingSkills] = useState([]);
+  const [STRUCTURE_CHECKS, setStructureChecks] = useState([]);
+  const [CONTACT_CHECKS, setContactChecks] = useState([]);
+  const [bullets, setBullets] = useState([]);
 
-  // Smart AI Bullet Fixer State
-  const [weakBullets, setWeakBullets] = useState([]);
-  const [rewrittenBullets, setRewrittenBullets] = useState({});
-  const [loadingIndex, setLoadingIndex] = useState(null); 
+  const fileInput = useRef(null);
+  const [iridescenceMounted, setIridescenceMounted] = useState(false);
+  useEffect(() => setIridescenceMounted(true), []);
 
-  const fileInputRef = useRef(null);
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+  const runAnalyze = async () => {
+    if (!file || !jd.trim()) {
+      alert("Please upload a resume and paste a job description.");
+      return;
     }
-  };
-
-  const handleRemoveFile = (e) => {
-    e.stopPropagation();
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleAnalyze = async (e) => {
-    e.preventDefault();
-    if (!file || !jobDescription) {
-      return alert("Please provide both a PDF resume and a Job Description.");
-    }
-
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("resume", file);
-    formData.append("jobDescription", jobDescription);
-
+    
+    setAnalyzing(true);
     try {
-      const response = await fetch("http://localhost:8000/internal/v1/extract-and-score", {
+      const formData = new FormData();
+      formData.append("resume", file);
+      formData.append("jobDescription", jd);
+
+      const res = await fetch("http://127.0.0.1:8000/internal/v1/extract-and-score", {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
+      if (!res.ok) throw new Error("Analysis failed");
 
-      if (response.ok) {
-        setScore(data.score);
-        setSuggestions(data.suggestions || []);
-        setMatchedSkills(data.matched_skills || []);
-        setMissingSkills(data.missing_skills || []);
-        setMetricsCount(data.metrics_detected || 0);
-        setStructure(data.structure_check || {});
-        setFormatting(data.formatting_check || {});
-        setWeakBullets(data.weak_bullets || []);
-        setRewrittenBullets({});
-      } else {
-        alert(data.detail || "Error analyzing resume.");
-      }
-    } catch (error) {
-      alert("Error connecting to the backend server.");
+      const data = await res.json();
+      
+      setScore(data.score || 0);
+      setMetricsDetected(data.metrics_detected || 0);
+      setMatchedSkills(data.matched_skills || []);
+      setMissingSkills(data.missing_skills || []);
+      
+      const sc = data.structure_check || {};
+      setStructureChecks([
+        { label: "Word Count", value: `${sc.word_count || 0} words`, ok: sc.word_count >= 300 && sc.word_count <= 800 },
+        { label: "Education Section", value: sc.has_education ? "Detected" : "Not found", ok: sc.has_education },
+        { label: "Experience Section", value: sc.has_experience ? "Detected" : "Not found", ok: sc.has_experience },
+        { label: "Skills Section", value: sc.has_skills ? "Detected" : "Not found", ok: sc.has_skills },
+        { label: "Projects Section", value: sc.has_projects ? "Detected" : "Not found", ok: sc.has_projects, warn: sc.has_projects ? undefined : "Add 2–3 projects to boost your score." },
+      ]);
+
+      const fc = data.formatting_check || {};
+      setContactChecks([
+        { label: "Email", value: fc.has_email ? "Detected" : "Not found", ok: fc.has_email, icon: Mail },
+        { label: "Phone", value: fc.has_phone ? "Detected" : "Not found", ok: fc.has_phone, icon: Phone },
+        { label: "LinkedIn", value: fc.has_linkedin ? "Detected" : "Not found", ok: fc.has_linkedin, icon: Linkedin },
+        { label: "GitHub", value: fc.has_github ? "Detected" : "Not found", ok: fc.has_github, icon: Github },
+        { label: "Project Repo Links", value: `${fc.repo_link_count || 0} links`, ok: fc.repo_link_count > 0, icon: Link2 },
+      ]);
+
+      const wb = data.weak_bullets || [];
+      setBullets(wb.map((b, i) => ({ id: i + 1, weak: b, fixed: null, loading: false })));
+      
+      setAnalyzed(true);
+      setTimeout(() => {
+        document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch (err) {
+      console.error(err);
+      alert("Error connecting to backend API.");
     } finally {
-      setLoading(false);
+      setAnalyzing(false);
     }
   };
 
-  const handleRewrite = async (bulletText, index) => {
-    setLoadingIndex(index);
+  const onFilePicked = (f) => {
+    if (f) {
+      setFile(f);
+      setFileName(f.name);
+    }
+  };
+
+  const fixBullet = async (id) => {
+    const bullet = bullets.find(b => b.id === id);
+    if (!bullet) return;
+
+    setBullets((prev) => prev.map((b) => (b.id === id ? { ...b, loading: true } : b)));
+    
     try {
-      const response = await fetch("http://localhost:8000/internal/v1/rewrite-bullet", {
+      const res = await fetch("http://127.0.0.1:8000/internal/v1/rewrite-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bullet: bulletText }),
+        body: JSON.stringify({ bullet: bullet.weak })
       });
-      const data = await response.json();
-      if (response.ok) {
-        setRewrittenBullets(prev => ({ ...prev, [index]: data.rewritten_bullet }));
-      }
-    } catch (error) {
-      alert("Error connecting to the AI rewriter.");
-    } finally {
-      setLoadingIndex(null);
+      if (!res.ok) throw new Error("Rewrite failed");
+      
+      const data = await res.json();
+      setBullets((prev) => prev.map((b) => (b.id === id ? { ...b, loading: false, fixed: data.rewritten_bullet } : b)));
+    } catch (err) {
+      console.error(err);
+      setBullets((prev) => prev.map((b) => (b.id === id ? { ...b, loading: false } : b)));
+      alert("Error rewriting bullet point.");
     }
+  };
+
+  const ringCircumference = 2 * Math.PI * 70;
+  const ringOffset = useMemo(
+    () => ringCircumference - (score / 100) * ringCircumference,
+    [score, ringCircumference],
+  );
+
+  return (
+    <div className="relative min-h-screen text-ink selection:bg-emerald-400/20 selection:text-emerald-100">
+      {iridescenceMounted && (
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+          <Suspense fallback={null}>
+            <Cloudscape colorBottom="#0b1220" colorMid="#3b4a7a" colorTop="#e6ecff" speed={0.6} />
+          </Suspense>
+        </div>
+      )}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-slate-950/30" />
+      <div className="relative z-10">
+        <PillNav
+          items={[
+            { label: "Home", href: "#" },
+            { label: "Features", href: "#features" },
+            { label: "Bullet Fixer", href: "#bullet-fixer" },
+            { label: "Docs", href: "#docs" },
+          ]}
+          activeHref="#"
+          baseColor="rgba(8,9,11,0.92)"
+          pillColor="rgba(255,255,255,0.08)"
+          hoveredPillTextColor="#ffffff"
+          pillTextColor="#ffffff"
+          className="md:left-1/2 md:-translate-x-1/2"
+        />
+
+        {/* Hero / Input */}
+        <section className="mx-auto max-w-7xl px-3 pt-24 pb-6 sm:px-4 sm:pt-28 md:pt-32 lg:px-6 lg:pt-36 sm:pb-8 lg:pb-10">
+          <div className="mb-6 sm:mb-10">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cream-border bg-cream px-2.5 py-1 text-[11px] text-subtle sm:mb-5">
+              <span className="h-1 w-1 rounded-full bg-emerald-400" />
+              v2.1 · Bullet rewriter now powered by Groq
+            </div>
+            <h1 className="max-w-3xl text-[32px] font-medium leading-[1.05] tracking-[-0.03em] text-ink sm:text-[44px] lg:text-[56px] drop-shadow-sm">
+              Beat the ATS.
+              <br />
+              <span className="text-subtle">Land the interview.</span>
+            </h1>
+            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-subtle drop-shadow-sm sm:mt-4">
+              Drop your resume, paste a job description, and get an instant ATS score with AI-rewritten bullets — in seconds.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:gap-3 lg:grid-cols-5">
+            {/* Upload */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); onFilePicked(e.dataTransfer.files?.[0]); }}
+              onClick={() => fileInput.current?.click()}
+              className={`group relative cursor-pointer overflow-hidden rounded-xl border p-4 transition-all sm:p-6 lg:col-span-2 ${
+                dragOver
+                  ? "border-emerald-400/40 bg-emerald-500/15 shadow-[0_0_0_4px_rgba(16,185,129,0.08)]"
+                  : "border-cream-border bg-cream backdrop-blur-xl hover:bg-cream/80"
+              }`}
+            >
+              <input ref={fileInput} type="file" accept=".pdf" className="hidden" onChange={(e) => onFilePicked(e.target.files?.[0])} />
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">Resume</div>
+                <UploadCloud className="h-4 w-4 text-subtle transition-colors group-hover:text-ink" />
+              </div>
+
+              <div className="mt-14 mb-2">
+                <p className="text-[15px] font-medium text-ink">Drop your PDF here</p>
+                <p className="mt-1 text-[13px] text-subtle">or click to browse — max 10 MB</p>
+              </div>
+
+              {fileName && (
+                <div className="mt-6 flex items-center justify-between rounded-lg border border-cream-border bg-white/10 px-3 py-2 shadow-sm">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                    <span className="truncate text-[13px] text-ink">{fileName}</span>
+                  </div>
+                  <span className="text-[11px] text-subtle">218 KB</span>
+                </div>
+              )}
+            </div>
+
+            {/* JD */}
+            <div className="rounded-xl border border-cream-border bg-cream backdrop-blur-xl p-4 sm:p-6 lg:col-span-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">Job description</div>
+                <span className="text-[11px] text-subtle">{jd.length} chars</span>
+              </div>
+              <textarea
+                value={jd}
+                onChange={(e) => setJd(e.target.value)}
+                rows={7}
+                placeholder="Paste the job description here…"
+                className="mt-4 w-full resize-none bg-transparent text-[14px] leading-relaxed text-ink placeholder:text-subtle focus:outline-none"
+              />
+              <div className="mt-2 flex items-center justify-between border-t border-cream-border pt-3 text-[11px] text-subtle">
+                <span>Tip: paste the full listing for best matching</span>
+                <AnalyzeButton onClick={runAnalyze} disabled={analyzing} loading={analyzing}>
+                  {analyzing ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Analyzing
+                    </>
+                  ) : (
+                    <>
+                      Analyze
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </>
+                  )}
+                </AnalyzeButton>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Results */}
+        {analyzed && (
+          <section id="results" className="mx-auto max-w-7xl px-3 pb-12 sm:px-4 lg:px-6 sm:pb-24 animate-fade-in">
+            <div className="mb-8 flex items-center gap-3">
+              <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">Results</div>
+              <div className="h-px flex-1 bg-white/[0.12]" />
+              <div className="text-[11px] text-subtle">Just now</div>
+            </div>
+
+            <div className="grid gap-2 sm:gap-3 lg:grid-cols-5">
+              <div className="relative overflow-hidden rounded-xl border border-cream-border bg-cream backdrop-blur-xl p-4 sm:p-6 lg:col-span-2">
+                <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">ATS Score</div>
+                <div className="mt-3 flex items-center gap-4 sm:mt-4 sm:gap-5">
+                  <div className="relative h-20 w-20 shrink-0 sm:h-28 sm:w-28">
+                    <svg className="h-full w-full -rotate-90" viewBox="0 0 160 160">
+                      <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="8" />
+                      <circle
+                        cx="80" cy="80" r="70" fill="none"
+                        stroke="#34d399" strokeWidth="8" strokeLinecap="round"
+                        strokeDasharray={ringCircumference}
+                        strokeDashoffset={ringOffset}
+                        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)" }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 grid place-items-center">
+                      <div className="text-[22px] font-semibold tracking-tight tabular-nums text-ink sm:text-3xl">{score}</div>
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium text-ink">Good</div>
+                    <div className="mt-1 text-[12px] leading-relaxed text-subtle">
+                      Passes most ATS parsers. Close 3 gaps to reach the 90s.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-amber-tint-border bg-amber-tint p-4 sm:p-5 shadow-sm lg:col-span-3">
+                <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border border-amber-400/25 bg-amber-500/15 text-amber-300">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-ink">3 high-priority action items</p>
+                  <ul className="mt-2 space-y-1 text-[13px] text-subtle">
+                    <li>Missing a <span className="text-ink">Projects</span> section — recruiters expect 2–3.</li>
+                    <li>5 high-signal keywords absent (Kubernetes, GraphQL, AWS Lambda…).</li>
+                    <li>GitHub link not detected in contact info.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Bento grid */}
+            <div className="mt-2 grid gap-2 sm:mt-3 sm:gap-3 md:grid-cols-2">
+              <BentoCard title="Technical Match" hint={`${MATCHED_SKILLS.length} / ${MATCHED_SKILLS.length + MISSING_SKILLS.length}`} tint="blue">
+                <div>
+                  <p className="mb-2 text-[11px] tracking-wider text-subtle uppercase">Matched</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MATCHED_SKILLS.map((s) => (
+                      <span key={s} className="inline-flex items-center gap-1 rounded-md border border-emerald-400/25 bg-emerald-500/15 px-2 py-1 text-[12px] text-ink">
+                        <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-5">
+                  <p className="mb-2 text-[11px] tracking-wider text-subtle uppercase">Missing</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MISSING_SKILLS.map((s) => (
+                      <span key={s} className="inline-flex items-center gap-1 rounded-md border border-cream-border bg-white/5 px-2 py-1 text-[12px] text-subtle line-through decoration-white/30">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </BentoCard>
+
+              <BentoCard title="Proof of Impact" hint={`${Math.min(Math.round((metricsDetected / 5) * 100), 100)}%`} tint="amber">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-semibold tracking-tight tabular-nums text-ink">{metricsDetected}</span>
+                  <span className="text-[13px] text-subtle">/ 5 quantified bullets</span>
+                </div>
+                <div className="mt-5 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-emerald-400" style={{ width: `${Math.min((metricsDetected / 5) * 100, 100)}%` }} />
+                </div>
+                <div className="mt-4 flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className={`h-8 flex-1 rounded ${i <= metricsDetected ? "bg-emerald-400/80" : "bg-white/10"}`} />
+                  ))}
+                </div>
+                <p className="mt-4 text-[13px] leading-relaxed text-subtle">
+                  {metricsDetected >= 5 ? "Great job quantifying your impact!" : `Add numbers or dollar amounts to ${5 - metricsDetected} more bullets to enter the top tier.`}
+                </p>
+              </BentoCard>
+
+              <BentoCard title="ATS Structure" hint={`${STRUCTURE_CHECKS.filter(c => c.ok).length} / ${STRUCTURE_CHECKS.length}`} tint="mint">
+                <ul className="divide-y divide-cream-border">
+                  {STRUCTURE_CHECKS.map((c) => (
+                    <li key={c.label} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        {c.ok ? (
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                        ) : (
+                          <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-ink">{c.label}</p>
+                          {c.warn && <p className="mt-0.5 text-[12px] text-subtle">{c.warn}</p>}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-[12px] tabular-nums text-subtle">{c.value}</span>
+                    </li>
+                  ))}
+                </ul>
+              </BentoCard>
+
+              <BentoCard title="Contact & Links" hint={`${CONTACT_CHECKS.filter(c => c.ok).length} / ${CONTACT_CHECKS.length}`} tint="violet">
+                <ul className="divide-y divide-cream-border">
+                  {CONTACT_CHECKS.map((c) => {
+                    const Icon = c.icon;
+                    return (
+                      <li key={c.label} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <Icon className="h-3.5 w-3.5 shrink-0 text-accent-violet" />
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-ink">{c.label}</p>
+                            <p className="truncate text-[12px] text-subtle">{c.value}</p>
+                          </div>
+                        </div>
+                        {c.ok ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </BentoCard>
+            </div>
+
+            {/* Smart Bullet Fixer */}
+            <div id="bullet-fixer" className="mt-2 rounded-xl border border-ai-tint-border bg-ai-tint backdrop-blur-xl shadow-sm sm:mt-3">
+              <div className="flex items-start justify-between gap-4 border-b border-ai-tint-border px-4 py-4 sm:px-6 sm:py-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-accent-violet" />
+                    <h3 className="text-[15px] font-medium tracking-tight text-ink">Smart Bullet Fixer</h3>
+                  </div>
+                  <p className="mt-1 text-[13px] text-subtle">
+                    Rewrite weak bullets into quantified, recruiter-ready achievements.
+                  </p>
+                </div>
+                <div className="hidden shrink-0 items-center gap-1.5 rounded-md border border-ai-tint-border bg-white/5 px-2 py-1 text-[11px] text-subtle md:flex">
+                  <span className="tabular-nums text-ink">{bullets.filter((b) => b.fixed).length}</span>
+                  <span className="text-subtle">/</span>
+                  <span className="tabular-nums text-subtle">{bullets.length}</span>
+                  <span className="text-subtle">rewritten</span>
+                </div>
+              </div>
+
+              <ul className="divide-y divide-cream-border">
+                {bullets.map((b, i) => (
+                  <li key={b.id} className="px-4 py-4 sm:px-6 sm:py-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="flex min-w-0 items-start gap-3 md:max-w-2xl">
+                        <span className="mt-0.5 text-[11px] tabular-nums text-subtle">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <p className="text-[14px] leading-relaxed text-subtle">{b.weak}</p>
+                      </div>
+                      {!b.fixed && (
+                        <AiRewriteButton onClick={() => fixBullet(b.id)} disabled={b.loading} loading={b.loading} />
+                      )}
+                    </div>
+
+                    {b.loading && !b.fixed && (
+                      <div className="mt-4 ml-8 space-y-2">
+                        <div className="h-2 w-11/12 animate-pulse rounded-full bg-accent-violet/25" />
+                        <div className="h-2 w-8/12 animate-pulse rounded-full bg-accent-violet/25" />
+                      </div>
+                    )}
+
+                    {b.fixed && (
+                      <div className="mt-4 ml-8 rounded-lg border-l-2 border-accent-violet/60 bg-accent-violet/10 px-4 py-3">
+                        <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium tracking-wider text-ink uppercase">
+                          <Sparkles className="h-3 w-3 text-accent-violet" />
+                          AI Suggestion
+                        </div>
+                        <p className="text-[14px] leading-relaxed text-ink">{b.fixed}</p>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <footer className="mt-8 flex flex-col gap-1 border-t border-white/10 pt-4 text-[12px] text-subtle sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
+              <span>ResumeForge AI</span>
+              <span className="tabular-nums">v2.1.0</span>
+            </footer>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Bits ---------------- */
+
+function BentoCard({
+  title,
+  hint,
+  tint,
+  children,
+}) {
+  const tintClasses = {
+    blue: "border-blue-tint-border bg-blue-tint hover:bg-blue-tint/80",
+    amber: "border-amber-tint-border bg-amber-tint hover:bg-amber-tint/80",
+    mint: "border-mint-tint-border bg-mint-tint hover:bg-mint-tint/80",
+    violet: "border-violet-tint-border bg-violet-tint hover:bg-violet-tint/80",
   };
 
   return (
-    <div className="text-slate-800 antialiased min-h-screen pb-16 bg-[#F8F9FA]">
-      
-      {/* BEGIN: TopNavigation */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        {/* Logo */}
-        <div className="flex items-center">
-          <span className="text-blue-600 font-extrabold text-xl tracking-tight">
-            ResumeForge<span className="text-indigo-900"> AI</span>
-          </span>
-        </div>
-      </nav>
-      {/* END: TopNavigation */}
-
-      {/* BEGIN: MainContent */}
-      <main className="max-w-6xl mx-auto mt-8 px-4 space-y-6">
-        
-        {/* BEGIN: StartNewAnalysis Section */}
-        <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6 md:p-8">
-          <div className="flex items-center mb-6">
-            <span className="material-icons-outlined text-blue-500 mr-2 text-[22px]">auto_awesome</span>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Start New Analysis</h2>
-          </div>
-          
-          <form onSubmit={handleAnalyze}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              
-              {/* File Upload Area */}
-              <div 
-                onClick={handleUploadClick}
-                className="border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 hover:bg-slate-50 flex flex-col items-center justify-center p-8 text-center h-64 cursor-pointer transition-all duration-200 relative group"
-              >
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  accept="application/pdf" 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                />
-
-                {file ? (
-                  <div className="flex flex-col items-center justify-center w-full animate-fade-in">
-                    <div className="h-12 w-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-3">
-                      <span className="material-icons-outlined text-2xl">description</span>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-800 mb-0.5 max-w-[240px] truncate" title={file.name}>
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-slate-400 mb-4">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                    <button 
-                      type="button"
-                      onClick={handleRemoveFile}
-                      className="flex items-center text-red-500 hover:text-red-700 bg-red-50/50 hover:bg-red-50 border border-red-100/50 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-                    >
-                      <span className="material-icons-outlined text-[14px] mr-1">delete</span> Remove file
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="h-12 w-12 bg-blue-50/80 text-blue-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform duration-200">
-                      <span className="material-icons-outlined text-2xl">cloud_upload</span>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-800 mb-0.5">Drag &amp; Drop Resume PDF</p>
-                    <p className="text-xs text-slate-400">or click to browse files (Max 5MB)</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Job Description Area */}
-              <div className="flex flex-col h-64">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">
-                  Target Job Description
-                </label>
-                <textarea 
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  className="flex-grow w-full border border-slate-200 rounded-2xl p-4 text-sm text-slate-600 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 resize-none bg-white transition-all focus:outline-none"
-                  placeholder="Paste the job description here to tailor the analysis..."
-                />
-              </div>
-
-            </div>
-
-            <div className="mt-8 flex justify-center">
-              <button 
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-md shadow-blue-500/10 transition-colors w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <span className="material-icons-outlined text-lg mr-2">
-                  {loading ? 'sync' : 'analytics'}
-                </span> 
-                {loading ? "Analyzing Document..." : "Analyze Resume"}
-              </button>
-            </div>
-          </form>
-        </section>
-        {/* END: StartNewAnalysis Section */}
-
-        {score !== null && (
-          <div className="space-y-6">
-            
-            {/* BEGIN: Analysis Complete & Alert */}
-            <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6">
-              <div className="flex flex-col lg:flex-row gap-6 items-center">
-                {/* Score and Info */}
-                <div className="flex items-center flex-1 w-full">
-                  {/* Circular Progress */}
-                  <div className="w-32 h-32 relative flex-shrink-0">
-                    <svg className="w-full h-full max-h-[250px] mx-auto block transform -rotate-90" viewBox="0 0 36 36">
-                      <path 
-                        className="fill-none stroke-slate-100 stroke-[3.2]" 
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      ></path>
-                      <circle 
-                        className={`fill-none stroke-[2.4] stroke-linecap-round stroke-current transition-all duration-1000 ease-out ${
-                          score >= 75 ? 'text-emerald-500' : score >= 50 ? 'text-amber-500' : 'text-rose-500'
-                        }`}
-                        cx="18" 
-                        cy="18" 
-                        r="15.9155"
-                        strokeDasharray={`${score}, 100`}
-                      ></circle>
-                    </svg>
-                    {/* Overlay for text */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-extrabold text-slate-900 leading-none">{score}%</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Score</span>
-                    </div>
-                  </div>
-                  
-                  {/* Text */}
-                  <div className="ml-6 flex-1">
-                    <h3 className="text-lg font-bold text-slate-950 mb-1">Analysis Complete</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">
-                      {score >= 75 
-                        ? "Your resume shows strong compatibility! Complete the remaining action items below to optimize for automated selection."
-                        : score >= 50 
-                        ? "Your resume has a solid baseline match, but key refinements are recommended to optimize performance against applicant tracking systems."
-                        : "Your resume has a low suitability score. Review keyword presence, experience formatting, and ATS layout guidelines to improve performance."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* High Priority Alerts */}
-                {suggestions.length > 0 && (
-                  <div className="bg-rose-50/30 border border-rose-100/60 rounded-2xl p-5 lg:w-1/2 w-full flex-shrink-0">
-                    <div className="flex items-center mb-3 text-rose-500">
-                      <span className="material-icons-outlined text-lg mr-2">warning_amber</span>
-                      <h4 className="text-xs font-bold uppercase tracking-widest">High-Priority Action Items</h4>
-                    </div>
-                    <ul className="text-sm text-slate-600 space-y-2 list-disc pl-5">
-                      {suggestions.map((suggestion, idx) => (
-                        <li key={idx} className="marker:text-rose-400">{suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </section>
-            {/* END: Analysis Complete & Alert */}
-
-            {/* BEGIN: Grid Content (Match & Impact) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              {/* Technical Match */}
-              <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6 relative overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center">
-                    <span className="material-icons-outlined text-orange-600 mr-2 text-[20px]">grid_view</span>
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Technical Match</h3>
-                  </div>
-                  <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-lg">
-                    {matchedSkills.length + missingSkills.length > 0 
-                      ? `${Math.round((matchedSkills.length / (matchedSkills.length + missingSkills.length)) * 100)}% coverage`
-                      : "0% coverage"}
-                  </span>
-                </div>
-                
-                <div className="mb-5">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Matched Skills</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {matchedSkills.length > 0 ? (
-                      matchedSkills.map((skill, index) => (
-                        <span key={index} className="inline-flex items-center px-3 py-1 rounded-lg bg-indigo-50/60 text-indigo-600 text-xs font-semibold border border-indigo-100/50">
-                          <span className="material-icons text-[12px] mr-1">check</span> {skill}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">None</span>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Missing From JD</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {missingSkills.length > 0 ? (
-                      missingSkills.map((skill, index) => (
-                        <span key={index} className="inline-flex items-center px-3 py-1 rounded-lg bg-rose-50/60 text-rose-600 text-xs font-semibold border border-rose-100/50 animate-pulse">
-                          <span className="material-icons text-[12px] mr-1">close</span> {skill}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-green-600 font-semibold">None! Perfect match.</span>
-                    )}
-                  </div>
-                </div>
-              </section>
-
-              {/* Proof of Impact */}
-              <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6 relative overflow-hidden flex flex-col justify-center">
-                {/* Background Icon Watermark */}
-                <div className="absolute right-[-20px] top-1/2 transform -translate-y-1/2 text-slate-50 opacity-40 z-0 select-none pointer-events-none">
-                  <span className="material-icons" style={{ fontSize: "150px" }}>emoji_events</span>
-                </div>
-                
-                <div className="relative z-10 w-full">
-                  <div className="flex items-center mb-6 text-blue-600">
-                    <span className="material-icons-outlined mr-2 text-[20px]">trending_up</span>
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Proof of Impact</h3>
-                  </div>
-                  
-                  <div className="flex items-end mb-4">
-                    <span className="text-6xl font-extrabold text-blue-600 leading-none mr-3 tracking-tight">{metricsCount}</span>
-                    <div className="pb-1">
-                      <p className="text-sm font-bold text-slate-800">Metrics Found</p>
-                      <p className={`text-xs font-semibold ${metricsCount >= 5 ? 'text-green-600' : 'text-slate-400'}`}>
-                        {metricsCount >= 5 ? '(Strong Impact Goal Met)' : `(Goal: 5+ minimum)`}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${metricsCount >= 5 ? 'bg-green-500' : 'bg-blue-600'}`} 
-                      style={{ width: `${Math.min(100, (metricsCount / 5) * 100)}%`, transition: 'width 0.8s ease-in-out' }}
-                    ></div>
-                  </div>
-                </div>
-              </section>
-
-            </div>
-            {/* END: Grid Content (Match & Impact) */}
-
-            {/* BEGIN: Grid Content (ATS & Links) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              {/* ATS Structure Check */}
-              <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6">
-                <div className="flex items-center mb-6">
-                  <span className="material-icons-outlined text-slate-500 mr-2 text-[20px]">format_list_bulleted</span>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">ATS Structure Check</h3>
-                </div>
-                <div className="space-y-3">
-                  {/* Word Count */}
-                  <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                    <div className="flex items-center">
-                      <span className={`material-icons-outlined mr-3 text-[18px] ${(structure?.word_count >= 400 && structure?.word_count <= 900) ? 'text-indigo-500' : 'text-rose-500'}`}>
-                        {(structure?.word_count >= 400 && structure?.word_count <= 900) ? 'check_circle_outline' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-medium text-slate-600">Word Count (Target 400-800 words)</span>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400">{structure?.word_count || 0} words</span>
-                  </div>
-                  
-                  {/* Education */}
-                  <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                    <div className="flex items-center">
-                      <span className={`material-icons-outlined mr-3 text-[18px] ${structure?.has_education ? 'text-indigo-500' : 'text-rose-500'}`}>
-                        {structure?.has_education ? 'check_circle_outline' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-medium text-slate-600">Education Section</span>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400">{structure?.has_education ? 'Found' : 'Missing'}</span>
-                  </div>
-                  
-                  {/* Experience */}
-                  <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                    <div className="flex items-center">
-                      <span className={`material-icons-outlined mr-3 text-[18px] ${structure?.has_experience ? 'text-indigo-500' : 'text-rose-500'}`}>
-                        {structure?.has_experience ? 'check_circle_outline' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-medium text-slate-600">Experience Section</span>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400">{structure?.has_experience ? 'Found' : 'Missing'}</span>
-                  </div>
-                  
-                  {/* Skills */}
-                  <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                    <div className="flex items-center">
-                      <span className={`material-icons-outlined mr-3 text-[18px] ${structure?.has_skills ? 'text-indigo-500' : 'text-rose-500'}`}>
-                        {structure?.has_skills ? 'check_circle_outline' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-medium text-slate-600">Skills Section</span>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400">{structure?.has_skills ? 'Found' : 'Missing'}</span>
-                  </div>
-                  
-                  {/* Projects */}
-                  <div className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                    <div className="flex items-center">
-                      <span className={`material-icons-outlined mr-3 text-[18px] ${structure?.has_projects ? 'text-indigo-500' : 'text-rose-500'}`}>
-                        {structure?.has_projects ? 'check_circle_outline' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-medium text-slate-600">Projects Section</span>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400">{structure?.has_projects ? 'Found' : 'Missing'}</span>
-                  </div>
-                </div>
-              </section>
-
-              {/* Contact & Links */}
-              <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6">
-                <div className="flex items-center mb-6">
-                  <span className="material-icons-outlined text-slate-500 mr-2 text-[20px]">link</span>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Contact &amp; Links</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {/* Email */}
-                  <div className="bg-indigo-50/30 rounded-xl p-3 border border-indigo-100/10">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</p>
-                    <div className="flex items-center text-indigo-600">
-                      <span className="material-icons-outlined text-sm mr-1">
-                        {formatting?.has_email ? 'check_circle' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-semibold">{formatting?.has_email ? 'Verified' : 'Missing'}</span>
-                    </div>
-                  </div>
-                  {/* Phone */}
-                  <div className="bg-indigo-50/30 rounded-xl p-3 border border-indigo-100/10">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Phone Number</p>
-                    <div className="flex items-center text-indigo-600">
-                      <span className="material-icons-outlined text-sm mr-1">
-                        {formatting?.has_phone ? 'check_circle' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-semibold">{formatting?.has_phone ? 'Verified' : 'Missing'}</span>
-                    </div>
-                  </div>
-                  {/* LinkedIn */}
-                  <div className="bg-indigo-50/30 rounded-xl p-3 border border-indigo-100/10">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">LinkedIn Link</p>
-                    <div className="flex items-center text-indigo-600">
-                      <span className="material-icons-outlined text-sm mr-1">
-                        {formatting?.has_linkedin ? 'check_circle' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-semibold">{formatting?.has_linkedin ? 'Present' : 'Missing'}</span>
-                    </div>
-                  </div>
-                  {/* GitHub */}
-                  <div className="bg-indigo-50/30 rounded-xl p-3 border border-indigo-100/10">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">GitHub Link</p>
-                    <div className="flex items-center text-indigo-600">
-                      <span className="material-icons-outlined text-sm mr-1">
-                        {formatting?.has_github ? 'check_circle' : 'cancel'}
-                      </span>
-                      <span className="text-sm font-semibold">{formatting?.has_github ? 'Present' : 'Missing'}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Project Repo Links */}
-                <div className="border-t border-slate-100 pt-4">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3.5">Project Repo Links</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-500">GitHub / GitLab References</span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${formatting?.repo_link_count >= 2 ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700'}`}>
-                      {formatting?.repo_link_count || 0} Found
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-            </div>
-            {/* END: Grid Content (ATS & Links) */}
-
-            {/* BEGIN: Smart Bullet Fixer */}
-            {weakBullets.length > 0 && (
-              <section className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] border border-slate-100 p-6 md:p-8">
-                <div className="flex items-center mb-2">
-                  <span className="material-icons-outlined text-orange-600 mr-2 text-[22px]">auto_fix_high</span>
-                  <h2 className="text-lg font-bold text-slate-900 tracking-tight">Smart Bullet Fixer</h2>
-                </div>
-                <p className="text-sm text-slate-400 mb-6">
-                  We scanned your resume and detected {weakBullets.length} bullet points lacking measurable metrics. Click AI to generate impact improvements.
-                </p>
-                
-                <div className="space-y-4">
-                  {weakBullets.map((bullet, index) => (
-                    <div key={index} className="flex flex-col gap-3">
-                      
-                      {/* Weak Bullet row container */}
-                      <div className="bg-slate-50/40 border border-slate-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center mb-2 text-rose-500">
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Weak Impact</span>
-                          </div>
-                          <p className="text-sm font-medium text-slate-600 leading-relaxed italic">
-                            "{bullet}"
-                          </p>
-                        </div>
-                        {!rewrittenBullets[index] && (
-                          <button 
-                            type="button"
-                            onClick={() => handleRewrite(bullet, index)}
-                            disabled={loadingIndex !== null}
-                            className="flex-shrink-0 bg-blue-50/50 hover:bg-blue-50 text-blue-600 border border-blue-100/50 px-4 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed self-end md:self-auto shadow-sm"
-                          >
-                            <span className="material-icons text-sm mr-1">
-                              {loadingIndex === index ? 'sync' : 'auto_fix_high'}
-                            </span>
-                            {loadingIndex === index ? 'Rewriting...' : 'Fix with AI'}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Rewritten (Applied) suggest box */}
-                      {rewrittenBullets[index] && (
-                        <div className="bg-green-50/30 border border-green-100/80 rounded-xl p-5 flex flex-col gap-2 relative animate-fade-in">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center">
-                              <span className="bg-green-600 text-white text-[9px] font-bold px-2 py-0.5 rounded flex items-center mr-2 tracking-wider">
-                                <span className="material-icons text-[12px] mr-1">check</span> APPLIED
-                              </span>
-                              <span className="text-xs text-green-700 font-semibold">Replaced in analysis</span>
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setRewrittenBullets(prev => {
-                                  const updated = { ...prev };
-                                  delete updated[index];
-                                  return updated;
-                                });
-                              }}
-                              className="text-xs text-red-400 hover:text-red-600 font-bold transition-colors cursor-pointer"
-                            >
-                              Discard
-                            </button>
-                          </div>
-                          <p className="text-sm font-semibold text-slate-800 leading-relaxed italic border-l-2 border-green-400 pl-3">
-                            "{rewrittenBullets[index]}"
-                          </p>
-                        </div>
-                      )}
-
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-            {/* END: Smart Bullet Fixer */}
-
-          </div>
-        )}
-
-      </main>
-      {/* END: MainContent */}
+    <div className={`rounded-xl backdrop-blur-xl p-4 sm:p-5 shadow-sm transition-all ${tintClasses[tint]}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <h4 className="text-[13px] font-medium text-ink">{title}</h4>
+        {hint && <span className="text-[11px] tabular-nums text-subtle">{hint}</span>}
+      </div>
+      {children}
     </div>
   );
-};
-
-export default ResumeAnalyzer;
+}
