@@ -88,7 +88,7 @@ export default function App() {
         { label: "Phone", value: fc.has_phone ? "Detected" : "Not found", ok: fc.has_phone, icon: Phone },
         { label: "LinkedIn", value: fc.has_linkedin ? "Detected" : "Not found", ok: fc.has_linkedin, icon: Linkedin },
         { label: "GitHub", value: fc.has_github ? "Detected" : "Not found", ok: fc.has_github, icon: Github },
-        { label: "Project Repo Links", value: `${fc.repo_link_count || 0} links`, ok: fc.repo_link_count > 0, icon: Link2 },
+        { label: "Project Repo Links", value: `${fc.repo_link_count || 0} links`, ok: sc.has_projects && fc.repo_link_count > 0 && (!data.missing_project_links || data.missing_project_links.length === 0), icon: Link2 },
       ]);
 
       const wb = data.weak_bullets || [];
@@ -141,6 +141,28 @@ export default function App() {
     () => ringCircumference - (score / 100) * ringCircumference,
     [score, ringCircumference],
   );
+
+  let scoreColor = "#34d399";
+  let scoreLabel = "Good";
+  let scoreText = "Passes most ATS parsers. Close a few gaps to reach the 90s.";
+
+  if (score < 50) {
+    scoreColor = "#ef4444"; 
+    scoreLabel = "Bad";
+    scoreText = "Needs significant improvement. Missing critical sections.";
+  } else if (score <= 70) {
+    scoreColor = "#facc15"; 
+    scoreLabel = "Average";
+    scoreText = "Some good elements, but lacks key requirements.";
+  } else if (score <= 90) {
+    scoreColor = "#34d399"; 
+    scoreLabel = "Good";
+    scoreText = "Passes most ATS parsers. Close a few gaps to reach the 90s.";
+  } else {
+    scoreColor = "#10b981"; 
+    scoreLabel = "Best";
+    scoreText = "Excellent resume! Ready to land interviews.";
+  }
 
   return (
     <div className="relative min-h-screen text-ink selection:bg-emerald-400/20 selection:text-emerald-100">
@@ -262,50 +284,58 @@ export default function App() {
               <div className="text-[11px] text-subtle">Just now</div>
             </div>
 
-            <div className="grid gap-2 sm:gap-3 lg:grid-cols-5">
-              <div className="relative overflow-hidden rounded-xl border border-cream-border bg-cream backdrop-blur-xl p-4 sm:p-6 lg:col-span-2">
-                <div className="text-[11px] font-medium tracking-wider text-subtle uppercase">ATS Score</div>
-                <div className="mt-3 flex items-center gap-4 sm:mt-4 sm:gap-5">
-                  <div className="relative h-20 w-20 shrink-0 sm:h-28 sm:w-28">
+            <div className="grid gap-2 sm:gap-3 lg:grid-cols-3">
+              <div className="relative overflow-hidden rounded-xl border border-cream-border bg-cream backdrop-blur-xl p-5 sm:p-7 lg:col-span-1 @container">
+                <div className="text-[25px] font-bold tracking-wider text-subtle uppercase text-center @md:text-left">ATS Score</div>
+                <div className="mt-4 flex flex-col @md:flex-row items-center gap-5 sm:mt-5 @md:gap-6">
+                  <div className="relative h-36 w-36 shrink-0 @md:h-44 @md:w-44">
                     <svg className="h-full w-full -rotate-90" viewBox="0 0 160 160">
                       <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="8" />
                       <circle
                         cx="80" cy="80" r="70" fill="none"
-                        stroke="#34d399" strokeWidth="8" strokeLinecap="round"
+                        stroke={scoreColor} strokeWidth="8" strokeLinecap="round"
                         strokeDasharray={ringCircumference}
                         strokeDashoffset={ringOffset}
-                        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)" }}
+                        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1), stroke 1.2s ease" }}
                       />
                     </svg>
                     <div className="absolute inset-0 grid place-items-center">
-                      <div className="text-[22px] font-semibold tracking-tight tabular-nums text-ink sm:text-3xl">{score}</div>
+                      <div className="text-[40px] font-bold tracking-tight tabular-nums text-ink @md:text-[56px]">{score}</div>
                     </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-ink">Good</div>
-                    <div className="mt-1 text-[12px] leading-relaxed text-subtle">
-                      Passes most ATS parsers. Close 3 gaps to reach the 90s.
+                  <div className="min-w-0 flex-1 text-center @md:text-left">
+                    <div className="text-[55px] @md:text-[28px] font-semibold tracking-tight text-ink leading-none">{scoreLabel}</div>
+                    <div className="mt-6 @md:mt-3 text-[16px] @md:text-[15px] leading-relaxed text-subtle">
+                      {scoreText}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-4 rounded-xl border border-amber-tint-border bg-amber-tint p-5 sm:p-7 shadow-md lg:col-span-3">
-                <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-md border border-amber-400/25 bg-amber-500/15 text-amber-300">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[18px] font-medium text-ink">
+              <div className="flex flex-col gap-4 rounded-xl border border-amber-tint-border bg-amber-tint p-5 sm:p-7 shadow-md lg:col-span-2">
+                <div className="flex items-center gap-4">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-amber-400/25 bg-amber-500/15">
+                    <img src="/alarm.png" alt="Alarm" className="h-6 w-6 object-contain" />
+                  </div>
+                  <h3 className="text-[22px] sm:text-[26px] font-bold text-ink">
                     {suggestions.length > 0 ? `${suggestions.length} high-priority action items` : 'Looking good!'}
-                  </p>
-                  <ul className="mt-3 space-y-2 text-[15px] list-disc ml-5 text-subtle">
-                    {suggestions.length > 0 ? (
-                      suggestions.map((s, i) => <li key={i}>{s}</li>)
-                    ) : (
-                      <li>No major issues detected. Great job!</li>
-                    )}
-                  </ul>
+                  </h3>
                 </div>
+                <ul className="mt-2 space-y-3 text-[16px] text-subtle w-full">
+                  {suggestions.length > 0 ? (
+                    suggestions.map((s, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="text-amber-500 shrink-0">➥</span>
+                        <span>{s}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="flex items-start gap-3">
+                      <span className="text-amber-500 shrink-0">➥</span>
+                      <span>No major issues detected. Great job!</span>
+                    </li>
+                  )}
+                </ul>
               </div>
             </div>
 
@@ -327,7 +357,7 @@ export default function App() {
                   <p className="mb-2 text-[11px] tracking-wider text-subtle uppercase">Missing</p>
                   <div className="flex flex-wrap gap-1.5">
                     {MISSING_SKILLS.map((s) => (
-                      <span key={s} className="inline-flex items-center gap-1 rounded-md border border-cream-border bg-white/5 px-2 py-1 text-[12px] text-subtle line-through decoration-white/30">
+                      <span key={s} className="inline-flex items-center gap-1 rounded-md border border-cream-border bg-white/5 px-2 py-1 text-[12px] text-emerald-400">
                         {s}
                       </span>
                     ))}

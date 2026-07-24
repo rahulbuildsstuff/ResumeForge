@@ -110,6 +110,10 @@ def calculate_total_ats_score(analysis_data: dict) -> dict:
         if has_projects: 
             suggestions.append("Projects section found, but no repository links detected. Link your code repositories!")
 
+    missing_projects = analysis_data.get("missing_project_links", [])
+    if missing_projects:
+        suggestions.append("Some of your projects are missing repository links. Please add repository links to all your projects.")
+
     score += format_score
 
     # ---------------------------------------------------------

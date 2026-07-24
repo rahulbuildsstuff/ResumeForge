@@ -94,6 +94,47 @@ async def rewrite_bullet(request: BulletRequest):
 # ------------------------------------------------------------------
 # Route 2: Main ATS Extraction and Scoring Endpoint
 # ------------------------------------------------------------------
+async def check_missing_project_links(resume_text: str, extracted_urls: list) -> list:
+    if not GROQ_API_KEY:
+        return []
+        
+    prompt = (
+        "You are an expert ATS parser. I will provide the text of a resume, and a list of hyperlinks extracted from it.\n"
+        "1. Identify the 'Projects' section.\n"
+        "2. List the names of any projects that DO NOT have a repository link (like github, gitlab, or a source code link) mentioned near them or matching the extracted hyperlinks.\n"
+        "3. Return ONLY a comma-separated list of the project names that are missing links. If all projects have links, or if there are no projects, return exactly the word 'NONE'. Do not include conversational text.\n\n"
+        f"Hyperlinks: {', '.join(extracted_urls)}\n\n"
+        f"Resume:\n{resume_text}"
+    )
+    
+    try:
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "llama-3.1-8b-instant", 
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+            "max_tokens": 100
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions", 
+                json=payload, headers=headers, timeout=10.0
+            )
+            response.raise_for_status()
+            content = response.json()['choices'][0]['message']['content'].strip()
+            
+            if 'NONE' in content.upper() or not content:
+                return []
+            
+            projects = [p.strip() for p in content.split(',') if p.strip()]
+            return projects
+    except Exception as e:
+        print(f"Error checking project links: {e}")
+        return []
+
 @app.post("/internal/v1/extract-and-score")
 async def extract_and_score(request: Request):
     try:
@@ -132,6 +173,10 @@ async def extract_and_score(request: Request):
         # 4. Perform NLP skill extraction & metadata analysis
         analysis_data = get_complete_ats_analysis(cleaned_resume, cleaned_jd, extracted_urls)
         
+        # 4.5 Check for specific projects missing links using Groq
+        missing_projects = await check_missing_project_links(cleaned_resume, extracted_urls)
+        analysis_data["missing_project_links"] = missing_projects
+        
         # 5. Compute mathematical ATS score & generate actionable suggestions
         scoring_results = calculate_total_ats_score(analysis_data)
         
@@ -146,6 +191,7 @@ async def extract_and_score(request: Request):
             "structure_check": analysis_data["structure"],
             "formatting_check": analysis_data["formatting"],
             "weak_bullets": analysis_data["weak_bullets"],
+            "missing_project_links": analysis_data.get("missing_project_links", []),
             "message": "Industry-grade ATS analysis complete!"
         }
         
