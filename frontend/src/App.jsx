@@ -34,6 +34,7 @@ export default function App() {
   
   // Backend State
   const [score, setScore] = useState(0);
+  const [suggestions, setSuggestions] = useState([]);
   const [metricsDetected, setMetricsDetected] = useState(0);
   const [MATCHED_SKILLS, setMatchedSkills] = useState([]);
   const [MISSING_SKILLS, setMissingSkills] = useState([]);
@@ -67,6 +68,7 @@ export default function App() {
       const data = await res.json();
       
       setScore(data.score || 0);
+      setSuggestions(data.suggestions || []);
       setMetricsDetected(data.metrics_detected || 0);
       setMatchedSkills(data.matched_skills || []);
       setMissingSkills(data.missing_skills || []);
@@ -288,16 +290,20 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-amber-tint-border bg-amber-tint p-4 sm:p-5 shadow-sm lg:col-span-3">
-                <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border border-amber-400/25 bg-amber-500/15 text-amber-300">
-                  <AlertTriangle className="h-3.5 w-3.5" />
+              <div className="flex items-start gap-4 rounded-xl border border-amber-tint-border bg-amber-tint p-5 sm:p-7 shadow-md lg:col-span-3">
+                <div className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-md border border-amber-400/25 bg-amber-500/15 text-amber-300">
+                  <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-ink">3 high-priority action items</p>
-                  <ul className="mt-2 space-y-1 text-[13px] text-subtle">
-                    <li>Missing a <span className="text-ink">Projects</span> section — recruiters expect 2–3.</li>
-                    <li>5 high-signal keywords absent (Kubernetes, GraphQL, AWS Lambda…).</li>
-                    <li>GitHub link not detected in contact info.</li>
+                  <p className="text-[18px] font-medium text-ink">
+                    {suggestions.length > 0 ? `${suggestions.length} high-priority action items` : 'Looking good!'}
+                  </p>
+                  <ul className="mt-3 space-y-2 text-[15px] list-disc ml-5 text-subtle">
+                    {suggestions.length > 0 ? (
+                      suggestions.map((s, i) => <li key={i}>{s}</li>)
+                    ) : (
+                      <li>No major issues detected. Great job!</li>
+                    )}
                   </ul>
                 </div>
               </div>
